@@ -11,7 +11,6 @@ func Parse(r io.Reader) (*[]types.DStatements, error) {
 	impl := lexer.NewLexerImpl(r, &keywordTokenizer{})
 	l := newLexerWrapper(impl)
 	yyParse(l)
-
 	if l.err != nil {
 		return nil, l.err
 	} else {

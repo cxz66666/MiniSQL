@@ -38,7 +38,7 @@ import (
   setexpr    types.SetExpr
   setexprlist []types.SetExpr
 }
-%token<str> IDENT
+%token<str> IDENT IDENT_LEGAL
 %token<str> PRIMARY KEY ASC DESC
 %token<str> IN
 %token<str>   INTERLEAVE
@@ -79,7 +79,7 @@ import (
 
 %type<flag> not_null_opt
 %type<flag> unique_opt
-
+%type<str> IDENT_ALL
 %type<strs> column_name_list table_name_list
 %type<stcls> storing_clause storing_clause_opt
 %type<intlr> interleave_clause
@@ -152,7 +152,7 @@ column_def_list:
   }
 
 column_def:
-  column_name column_type unique_opt not_null_opt
+  IDENT_LEGAL column_type unique_opt not_null_opt
   {
     $$ = types.Column{Name: $1, Type: $2,Unique:$3,NotNull: $4}
   }
@@ -178,7 +178,7 @@ key_part_list:
   }
 
 key_part:
-  column_name key_order_opt
+  IDENT_LEGAL key_order_opt
   {
     $$ = types.Key{Name: $1, KeyOrder: $2}
   }
@@ -340,12 +340,12 @@ storing_clause:
   }
 
 column_name_list:
-    column_name
+    IDENT_LEGAL
   {
     $$ = make([]string, 0, 1)
     $$ = append($$, $1)
   }
-  | column_name_list ',' column_name
+  | column_name_list ',' IDENT_LEGAL
   {
     $$ = append($1, $3)
   }
@@ -366,7 +366,7 @@ interleave_clause_list:
   }
 
 interleave_clause:
-    INTERLEAVE IN table_name
+    INTERLEAVE IN IDENT_ALL
   {
     $$ = types.Interleave{TableName: $3}
   }
@@ -438,7 +438,7 @@ set_opt_list:
     $$ = append($1, $3)
   }
 set_opt:
-  IDENT '=' value
+  IDENT_LEGAL '=' value
   {
     $$=types.SetExpr{
     	Left: $1,
@@ -446,7 +446,7 @@ set_opt:
     }
   }
 delete_stmt:
-    DELETE FROM table_name where_opt
+    DELETE FROM IDENT_ALL where_opt
     {
       s:=types.DeleteStatement{
       	TableName: $3,
@@ -481,10 +481,14 @@ sel_field_list:
    }
 
 table_name_list: // TODO  mulitplart where condition, now only one table can be select
-    table_name  //here we use table_name which is a string type ,not INDENT
+    IDENT_ALL  //here we use table_name which is a string type ,not INDENT
     {
       $$ = make([]string, 0, 1)
       $$ = append($$, $1)
+    }
+    | table_name_list ',' IDENT_ALL
+    {
+      $$ =append($1, $3)
     }
 
 where_opt:
@@ -500,7 +504,7 @@ expr_opt:
     {
     	$$=$2
     }
-    | IDENT compare_type value
+    | IDENT_ALL compare_type value
     {
 	$$= &types.ComparisonExpr{Left: $1,Operator:$2, Right:$3 }
     }
@@ -609,4 +613,14 @@ float64_value:
     {
       v, _ := strconv.ParseFloat($1, 0)
       $$ = v
+    }
+
+IDENT_ALL:
+    IDENT
+    {
+      $$=$1
+    }
+    | IDENT_LEGAL
+    {
+      $$=$1
     }

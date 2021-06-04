@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"minisql/src/Interpreter/lexer"
 	"regexp"
 	"strconv"
@@ -138,7 +139,7 @@ var symbols = map[string]int{
 }
 
 var (
-	databaseIdRegexp = regexp.MustCompile(`[a-zA-Z][a-z0-9_\-]*[a-z0-9]*`)
+	databaseIdRegexp = regexp.MustCompile(`[a-zA-Z0-9][a-z0-9_\-]*[a-z0-9]*`)
 	nameAttrRegexp   = regexp.MustCompile(`[a-zA-Z][a-zA-Z0-9_]*`)
 )
 
@@ -158,7 +159,7 @@ func (kt *keywordTokenizer) FromStrLit(lit string,TokenType lexer.Token, lastTok
 				if databaseIdRegexp.MatchString(lit) {
 					tokVal = database_id
 				}
-			case TABLE:
+			case TABLE,INTO,UPDATE,ON:
 				if nameAttrRegexp.MatchString(lit) {
 					tokVal = table_name
 				}
@@ -166,18 +167,13 @@ func (kt *keywordTokenizer) FromStrLit(lit string,TokenType lexer.Token, lastTok
 				if nameAttrRegexp.MatchString(lit) {
 					tokVal = index_name
 				}
-			case ON,FROM,INTO,UPDATE: // TODO duplicated token! Check pre-parsed tokens more!
-				if nameAttrRegexp.MatchString(lit) {
-					tokVal = table_name
-				}
-
-			case SELECT,COLUMN, LEFT_PARENTHESIS_TOKEN, COMMA_TOKEN:
-				if nameAttrRegexp.MatchString(lit) {
-					tokVal = column_name
-				}
 			}
 			if tokVal==0 {
-				tokVal= IDENT
+				if nameAttrRegexp.MatchString(lit){
+					tokVal=IDENT_LEGAL
+				} else {
+					tokVal= IDENT
+				}
 			}
 		}
 
@@ -190,7 +186,8 @@ func (kt *keywordTokenizer) FromStrLit(lit string,TokenType lexer.Token, lastTok
 			}
 		}
 	case lexer.FLOAT:
-		if _, err := strconv.ParseFloat(lit, 0); err == nil {
+		if i, err := strconv.ParseFloat(lit, 0); err == nil {
+			fmt.Println(i)
 			tokVal = float_value
 		}
 	case lexer.STRING:

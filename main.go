@@ -107,11 +107,14 @@ LOOP:
 		fmt.Println(string(sqlText))
 		if err != nil {
 			fmt.Println(err)
+			continue
 		}
 		for _,item:=range *ans{
 			fmt.Println(item)
 			if item.GetOperationType()==types.Select {
-				item.(types.SelectStatement).Where.Expr.Debug()
+				if item.(types.SelectStatement).Where!=nil {
+					item.(types.SelectStatement).Where.Expr.Debug()
+				}
 			}
 		}
 	}
