@@ -193,60 +193,63 @@ var yyExca = [...]int{
 
 const yyPrivate = 57344
 
-const yyLast = 202
+const yyLast = 224
 
 var yyAct = [...]int{
-	82, 39, 179, 149, 99, 130, 148, 100, 80, 32,
-	65, 69, 147, 131, 132, 106, 89, 90, 91, 67,
-	92, 93, 94, 58, 49, 104, 105, 95, 52, 48,
-	45, 42, 47, 44, 13, 14, 169, 41, 63, 135,
-	15, 151, 97, 50, 54, 78, 16, 74, 17, 18,
-	43, 60, 68, 174, 34, 35, 36, 33, 131, 132,
-	62, 152, 68, 46, 68, 76, 107, 108, 109, 101,
-	79, 51, 188, 113, 114, 98, 29, 30, 31, 73,
-	40, 134, 175, 160, 77, 161, 170, 112, 28, 111,
-	115, 138, 123, 161, 162, 55, 56, 127, 126, 117,
-	118, 119, 120, 121, 122, 83, 124, 38, 134, 133,
-	51, 110, 53, 27, 26, 25, 24, 23, 22, 81,
-	21, 20, 136, 137, 139, 183, 141, 86, 51, 181,
-	154, 142, 129, 128, 146, 75, 57, 33, 182, 176,
-	177, 157, 153, 72, 159, 113, 114, 180, 144, 158,
-	184, 164, 165, 125, 55, 56, 40, 166, 167, 168,
-	85, 150, 71, 66, 61, 171, 2, 12, 19, 11,
-	10, 9, 8, 7, 6, 5, 4, 3, 1, 64,
-	116, 96, 37, 185, 178, 187, 186, 172, 173, 59,
-	143, 156, 155, 140, 84, 163, 103, 102, 145, 88,
-	87, 70,
+	82, 39, 184, 154, 83, 109, 153, 32, 80, 132,
+	69, 117, 65, 58, 55, 56, 90, 152, 133, 134,
+	49, 67, 105, 52, 84, 90, 88, 89, 99, 100,
+	101, 48, 102, 103, 104, 88, 89, 45, 81, 55,
+	56, 42, 47, 44, 54, 174, 41, 107, 137, 63,
+	90, 60, 156, 50, 43, 68, 78, 74, 179, 46,
+	88, 89, 79, 133, 134, 76, 165, 91, 92, 93,
+	85, 62, 157, 68, 68, 108, 91, 92, 93, 85,
+	110, 73, 13, 14, 113, 29, 77, 28, 15, 33,
+	116, 112, 40, 125, 16, 124, 17, 18, 34, 35,
+	36, 91, 92, 93, 85, 129, 27, 128, 26, 30,
+	31, 118, 119, 120, 121, 122, 123, 25, 142, 38,
+	114, 115, 141, 138, 139, 143, 51, 193, 126, 144,
+	136, 180, 166, 175, 166, 167, 136, 135, 140, 188,
+	151, 158, 51, 111, 53, 24, 23, 22, 21, 20,
+	146, 96, 51, 186, 163, 159, 147, 131, 130, 75,
+	57, 33, 187, 162, 110, 173, 171, 172, 181, 182,
+	176, 72, 164, 114, 115, 185, 149, 189, 169, 170,
+	127, 55, 56, 12, 95, 40, 155, 71, 190, 66,
+	192, 191, 61, 2, 11, 19, 10, 9, 8, 7,
+	6, 5, 4, 3, 1, 64, 106, 37, 183, 177,
+	178, 59, 148, 161, 160, 145, 94, 168, 87, 86,
+	150, 98, 97, 70,
 }
 
 var yyPact = [...]int{
-	-5, -5, -1000, 90, 89, 87, 86, 85, 84, 83,
-	82, 57, 45, 36, 13, 75, -15, -32, 3, -1000,
+	43, 43, -1000, 118, 117, 116, 115, 114, 86, 77,
+	75, 56, 54, 68, 57, 87, -6, -22, 7, -1000,
 	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
-	-29, -33, 20, -1000, -30, -34, -41, -4, -1000, 99,
-	-1000, -35, 88, 150, -1000, 108, -42, -1000, -1000, -1000,
-	150, 159, 10, 158, 6, -1000, -1000, 157, 127, 18,
-	-1000, -1000, 107, 151, 16, -1000, 37, -1000, 91, 154,
-	98, -39, -36, -6, 150, 0, 81, -1000, 158, 0,
-	133, 91, 66, 91, 76, 146, 157, 116, -1000, -1000,
-	-1000, -1000, 105, -1000, -1000, 104, -1000, -53, -1000, 79,
-	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
-	-11, -1000, -1000, 91, 91, 61, 0, -1000, -1000, -1000,
-	-1000, -1000, -1000, 133, 97, 103, -1000, 134, -8, 156,
-	12, -1000, -1000, -1000, 0, 102, 133, 133, -1000, -1000,
-	-1000, 125, 156, -1000, 129, 53, -1000, -1000, 64, -1000,
-	143, -53, -53, -1000, 0, -1000, -1000, -18, 56, -1000,
-	-1000, 156, 9, -1000, -1000, -1000, -1000, -1000, 52, 122,
-	-1000, -1000, 136, -1000, 101, -1000, -1000, 119, 96, -1000,
-	140, 151, -1000, 136, 150, 42, -1000, -1000, -1000,
+	-19, -26, 16, -1000, -20, -32, -45, 6, -1000, 123,
+	-1000, -40, 120, 177, -1000, 132, -52, -1000, -1000, -1000,
+	177, 187, 21, 184, 9, -1000, -1000, 182, 155, 28,
+	-1000, -1000, 131, 180, 27, -1000, 29, -1000, 10, 178,
+	122, -27, -41, -1, 177, 1, 113, -1000, 184, 1,
+	161, 10, 78, 78, 10, -1000, -1000, -1000, -1000, -1000,
+	-1000, -1000, -1000, -1000, 98, 173, 182, 140, -1000, -1000,
+	-1000, -1000, 130, -1000, -1000, 129, -1000, -48, -1000, 107,
+	-1000, -2, -1000, -1000, 10, 10, 108, 35, -1000, -1000,
+	-1000, -1000, -1000, -1000, 35, 161, 121, 128, -1000, 162,
+	-3, 181, 23, -1000, -1000, -1000, 1, 127, 161, 161,
+	-1000, -1000, -1000, -1000, -1000, -1000, 147, 181, -1000, 157,
+	36, -1000, -1000, 105, -1000, 170, -48, -48, -1000, 1,
+	-1000, -1000, -9, 103, -1000, -1000, 181, 14, -1000, -1000,
+	-1000, -1000, -1000, 101, 151, -1000, -1000, 164, -1000, 125,
+	-1000, -1000, 143, 110, -1000, 167, 180, -1000, 164, 177,
+	97, -1000, -1000, -1000,
 }
 
 var yyPgo = [...]int{
-	0, 201, 11, 200, 199, 198, 197, 196, 195, 3,
-	6, 194, 193, 192, 191, 190, 9, 0, 1, 189,
-	188, 187, 2, 184, 182, 8, 181, 180, 7, 5,
-	19, 10, 179, 4, 178, 166, 177, 176, 175, 174,
-	173, 172, 171, 170, 169, 167,
+	0, 223, 10, 222, 221, 220, 219, 218, 217, 3,
+	6, 216, 215, 214, 213, 212, 7, 0, 1, 211,
+	210, 209, 2, 208, 207, 8, 206, 11, 4, 9,
+	21, 12, 205, 5, 204, 193, 203, 202, 201, 200,
+	199, 198, 197, 196, 194, 183,
 }
 
 var yyR1 = [...]int{
@@ -257,10 +260,10 @@ var yyR1 = [...]int{
 	5, 5, 15, 15, 38, 16, 16, 21, 21, 20,
 	18, 18, 23, 23, 23, 22, 39, 40, 41, 43,
 	43, 44, 32, 32, 31, 45, 42, 24, 24, 19,
-	19, 30, 30, 25, 25, 25, 25, 25, 33, 33,
-	28, 28, 28, 28, 28, 28, 28, 27, 27, 27,
-	27, 27, 27, 26, 26, 26, 26, 29, 29, 6,
-	6, 7, 17, 17,
+	19, 30, 30, 25, 25, 25, 25, 25, 25, 25,
+	25, 33, 33, 28, 28, 28, 28, 28, 28, 28,
+	27, 27, 27, 27, 27, 27, 26, 26, 26, 26,
+	29, 29, 6, 6, 7, 17, 17,
 }
 
 var yyR2 = [...]int{
@@ -271,10 +274,10 @@ var yyR2 = [...]int{
 	1, 1, 0, 2, 11, 0, 1, 0, 1, 4,
 	1, 3, 0, 1, 3, 3, 3, 3, 3, 7,
 	10, 5, 1, 3, 3, 4, 6, 1, 1, 1,
-	3, 0, 2, 3, 3, 3, 3, 2, 1, 3,
-	0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 0, 2, 4, 4, 1, 1, 1,
-	1, 1, 1, 1,
+	3, 0, 2, 3, 3, 3, 3, 3, 3, 3,
+	2, 1, 3, 0, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 0, 2, 4, 4,
+	1, 1, 1, 1, 1, 1, 1,
 }
 
 var yyChk = [...]int{
@@ -286,17 +289,18 @@ var yyChk = [...]int{
 	47, 29, 63, 24, -17, 4, 5, 28, 65, -19,
 	-17, 5, 50, 28, -32, -31, 5, -30, 46, -2,
 	-1, 5, 16, -30, 29, 28, -18, -30, 29, 33,
-	-25, 28, -17, 14, -11, 6, 29, -3, -4, 55,
+	-25, 28, -17, -28, 14, 69, -6, -7, 25, 26,
+	15, 66, 67, 68, -11, 6, 29, -3, -4, 55,
 	56, 57, 59, 60, 61, 63, -26, 48, -17, -33,
-	-28, 69, -6, -7, 25, 26, 15, 66, 67, 68,
-	30, -31, -28, 12, 13, -25, -27, 33, 34, 35,
-	36, 37, 38, -25, 30, 7, -2, -16, 28, 28,
-	-29, 66, 67, 30, 29, 50, -25, -25, 30, -28,
-	-12, 29, 28, -15, 14, -5, -29, 20, -10, -9,
-	5, 29, 49, -28, 28, -13, -14, 16, -10, 15,
-	30, 29, 30, -8, 8, 9, -29, -29, -33, 54,
-	30, -9, -21, -20, 44, 30, 17, 18, -23, -22,
-	11, 28, 19, 29, 10, -18, -22, -17, 30,
+	-28, 30, -31, -28, 12, 13, -25, -27, 33, 34,
+	35, 36, 37, 38, -27, -25, 30, 7, -2, -16,
+	28, 28, -29, 66, 67, 30, 29, 50, -25, -25,
+	30, -28, -17, -17, -28, -12, 29, 28, -15, 14,
+	-5, -29, 20, -10, -9, 5, 29, 49, -28, 28,
+	-13, -14, 16, -10, 15, 30, 29, 30, -8, 8,
+	9, -29, -29, -33, 54, 30, -9, -21, -20, 44,
+	30, 17, 18, -23, -22, 11, 28, 19, 29, 10,
+	-18, -22, -17, 30,
 }
 
 var yyDef = [...]int{
@@ -305,20 +309,21 @@ var yyDef = [...]int{
 	3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 	0, 0, 0, 46, 0, 0, 0, 0, 67, 68,
 	50, 0, 0, 0, 13, 0, 0, 56, 57, 58,
-	0, 0, 0, 0, 71, 102, 103, 15, 0, 71,
-	69, 51, 0, 0, 71, 62, 0, 65, 0, 19,
-	16, 0, 0, 93, 0, 80, 0, 61, 0, 80,
-	72, 0, 0, 0, 0, 0, 15, 45, 33, 34,
+	0, 0, 0, 0, 71, 105, 106, 15, 0, 71,
+	69, 51, 0, 0, 71, 62, 0, 65, 83, 19,
+	16, 0, 0, 96, 0, 83, 0, 61, 0, 83,
+	72, 83, 0, 0, 83, 84, 85, 86, 87, 88,
+	89, 102, 103, 104, 0, 0, 15, 45, 33, 34,
 	35, 36, 0, 38, 39, 0, 66, 0, 70, 0,
-	78, 81, 82, 83, 84, 85, 86, 99, 100, 101,
-	0, 63, 64, 0, 0, 0, 80, 87, 88, 89,
-	90, 91, 92, 77, 27, 0, 17, 42, 0, 0,
-	94, 97, 98, 59, 80, 0, 75, 76, 73, 74,
-	14, 30, 0, 18, 0, 0, 40, 41, 0, 21,
-	24, 0, 0, 79, 80, 28, 29, 0, 0, 43,
-	37, 0, 47, 23, 25, 26, 95, 96, 0, 0,
-	20, 22, 52, 48, 0, 60, 31, 0, 44, 53,
-	0, 0, 32, 0, 0, 0, 54, 55, 49,
+	81, 0, 63, 64, 83, 83, 0, 83, 90, 91,
+	92, 93, 94, 95, 83, 80, 27, 0, 17, 42,
+	0, 0, 97, 100, 101, 59, 83, 0, 78, 79,
+	73, 74, 77, 75, 76, 14, 30, 0, 18, 0,
+	0, 40, 41, 0, 21, 24, 0, 0, 82, 83,
+	28, 29, 0, 0, 43, 37, 0, 47, 23, 25,
+	26, 98, 99, 0, 0, 20, 22, 52, 48, 0,
+	60, 31, 0, 44, 53, 0, 0, 32, 0, 0,
+	0, 54, 55, 49,
 }
 
 var yyTok1 = [...]int{
@@ -1117,185 +1122,208 @@ yydefault:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line src/Interpreter/parser/spanner.go.y:508
 		{
-			yyVAL.expr = &types.ComparisonExpr{Left: yyDollar[1].str, Operator: yyDollar[2].compare, Right: yyDollar[3].valuetype}
+			yyVAL.expr = &types.ComparisonExprLSRV{Left: yyDollar[1].str, Operator: yyDollar[2].compare, Right: yyDollar[3].valuetype}
 		}
 	case 75:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line src/Interpreter/parser/spanner.go.y:512
 		{
-			yyVAL.expr = &types.AndExpr{Left: yyDollar[1].expr, Right: yyDollar[3].expr}
+			yyVAL.expr = &types.ComparisonExprLVRS{Left: yyDollar[1].valuetype, Operator: yyDollar[2].compare, Right: yyDollar[3].str}
 		}
 	case 76:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line src/Interpreter/parser/spanner.go.y:516
 		{
-			yyVAL.expr = &types.OrExpr{Left: yyDollar[1].expr, Right: yyDollar[3].expr}
+			yyVAL.expr = &types.ComparisonExprLVRV{Left: yyDollar[1].valuetype, Operator: yyDollar[2].compare, Right: yyDollar[3].valuetype}
 		}
 	case 77:
-		yyDollar = yyS[yypt-2 : yypt+1]
+		yyDollar = yyS[yypt-3 : yypt+1]
 //line src/Interpreter/parser/spanner.go.y:520
 		{
-			yyVAL.expr = &types.NotExpr{Expr: yyDollar[2].expr}
+			yyVAL.expr = &types.ComparisonExprLSRS{Left: yyDollar[1].str, Operator: yyDollar[2].compare, Right: yyDollar[3].str}
 		}
 	case 78:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line src/Interpreter/parser/spanner.go.y:524
+		{
+			left := yyDollar[1].expr
+			right := yyDollar[3].expr
+			yyVAL.expr = &types.AndExpr{Left: left, Right: right, LeftNum: left.GetTargetColsNum(), RightNum: right.GetTargetColsNum()}
+		}
+	case 79:
+		yyDollar = yyS[yypt-3 : yypt+1]
+//line src/Interpreter/parser/spanner.go.y:530
+		{
+			left := yyDollar[1].expr
+			right := yyDollar[3].expr
+			yyVAL.expr = &types.OrExpr{Left: left, Right: right, LeftNum: left.GetTargetColsNum(), RightNum: right.GetTargetColsNum()}
+		}
+	case 80:
+		yyDollar = yyS[yypt-2 : yypt+1]
+//line src/Interpreter/parser/spanner.go.y:536
+		{
+			left := yyDollar[2].expr
+			yyVAL.expr = &types.NotExpr{Expr: left, LeftNum: left.GetTargetColsNum()}
+		}
+	case 81:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:526
+//line src/Interpreter/parser/spanner.go.y:543
 		{
 			yyVAL.valuetypelist = make([]value.Value, 0, 1)
 			yyVAL.valuetypelist = append(yyVAL.valuetypelist, yyDollar[1].valuetype)
 		}
-	case 79:
+	case 82:
 		yyDollar = yyS[yypt-3 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:531
+//line src/Interpreter/parser/spanner.go.y:548
 		{
 			yyVAL.valuetypelist = append(yyDollar[1].valuetypelist, yyDollar[3].valuetype)
 		}
-	case 80:
+	case 83:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:536
+//line src/Interpreter/parser/spanner.go.y:553
 		{
 			yyVAL.valuetype = value.Bytes{}
 		}
-	case 81:
+	case 84:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:540
+//line src/Interpreter/parser/spanner.go.y:557
 		{
 			yyVAL.valuetype = value.Bytes{Val: []byte(yyDollar[1].str)}
 		}
-	case 82:
+	case 85:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:544
+//line src/Interpreter/parser/spanner.go.y:561
 		{
 			yyVAL.valuetype = value.Int{Val: yyDollar[1].i64}
 		}
-	case 83:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:548
-		{
-			yyVAL.valuetype = value.Float{Val: yyDollar[1].f64}
-		}
-	case 84:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:552
-		{
-			yyVAL.valuetype = value.Bool{Val: true}
-		}
-	case 85:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:556
-		{
-			yyVAL.valuetype = value.Bool{Val: false}
-		}
 	case 86:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:560
-		{
-			yyVAL.valuetype = value.Null{}
-		}
-	case 87:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:564
-		{
-			yyVAL.compare = value.Equal
-		}
-	case 88:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line src/Interpreter/parser/spanner.go.y:565
 		{
-			yyVAL.compare = value.Less
+			yyVAL.valuetype = value.Float{Val: yyDollar[1].f64}
 		}
-	case 89:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:566
-		{
-			yyVAL.compare = value.Great
-		}
-	case 90:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:567
-		{
-			yyVAL.compare = value.LessEqual
-		}
-	case 91:
-		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:568
-		{
-			yyVAL.compare = value.GreatEqual
-		}
-	case 92:
+	case 87:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line src/Interpreter/parser/spanner.go.y:569
 		{
-			yyVAL.compare = value.NotEqual
+			yyVAL.valuetype = value.Bool{Val: true}
+		}
+	case 88:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line src/Interpreter/parser/spanner.go.y:573
+		{
+			yyVAL.valuetype = value.Bool{Val: false}
+		}
+	case 89:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line src/Interpreter/parser/spanner.go.y:577
+		{
+			yyVAL.valuetype = value.Null{}
+		}
+	case 90:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line src/Interpreter/parser/spanner.go.y:581
+		{
+			yyVAL.compare = value.Equal
+		}
+	case 91:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line src/Interpreter/parser/spanner.go.y:582
+		{
+			yyVAL.compare = value.Less
+		}
+	case 92:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line src/Interpreter/parser/spanner.go.y:583
+		{
+			yyVAL.compare = value.Great
 		}
 	case 93:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line src/Interpreter/parser/spanner.go.y:584
+		{
+			yyVAL.compare = value.LessEqual
+		}
+	case 94:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line src/Interpreter/parser/spanner.go.y:585
+		{
+			yyVAL.compare = value.GreatEqual
+		}
+	case 95:
+		yyDollar = yyS[yypt-1 : yypt+1]
+//line src/Interpreter/parser/spanner.go.y:586
+		{
+			yyVAL.compare = value.NotEqual
+		}
+	case 96:
 		yyDollar = yyS[yypt-0 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:573
+//line src/Interpreter/parser/spanner.go.y:590
 		{
 			yyVAL.limit = types.Limit{}
 		}
-	case 94:
+	case 97:
 		yyDollar = yyS[yypt-2 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:577
+//line src/Interpreter/parser/spanner.go.y:594
 		{
 			yyVAL.limit = types.Limit{Rowcount: yyDollar[2].int}
 		}
-	case 95:
+	case 98:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:581
+//line src/Interpreter/parser/spanner.go.y:598
 		{
 			yyVAL.limit = types.Limit{Offset: yyDollar[2].int, Rowcount: yyDollar[4].int}
 		}
-	case 96:
+	case 99:
 		yyDollar = yyS[yypt-4 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:585
+//line src/Interpreter/parser/spanner.go.y:602
 		{
 			yyVAL.limit = types.Limit{Offset: yyDollar[2].int, Rowcount: yyDollar[4].int}
 		}
-	case 97:
+	case 100:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:590
+//line src/Interpreter/parser/spanner.go.y:607
 		{
 			v, _ := strconv.Atoi(yyDollar[1].str)
 			yyVAL.int = v
 		}
-	case 98:
+	case 101:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:595
+//line src/Interpreter/parser/spanner.go.y:612
 		{
 			v, _ := strconv.ParseInt(yyDollar[1].str, 16, 32)
 			yyVAL.int = int(v)
 		}
-	case 99:
+	case 102:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:601
+//line src/Interpreter/parser/spanner.go.y:618
 		{
 			v, _ := strconv.ParseInt(yyDollar[1].str, 10, 64)
 			yyVAL.i64 = v
 		}
-	case 100:
+	case 103:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:606
+//line src/Interpreter/parser/spanner.go.y:623
 		{
 			v, _ := strconv.ParseInt(yyDollar[1].str, 16, 64)
 			yyVAL.i64 = v
 		}
-	case 101:
+	case 104:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:613
+//line src/Interpreter/parser/spanner.go.y:630
 		{
 			v, _ := strconv.ParseFloat(yyDollar[1].str, 0)
 			yyVAL.f64 = v
 		}
-	case 102:
+	case 105:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:620
+//line src/Interpreter/parser/spanner.go.y:637
 		{
 			yyVAL.str = yyDollar[1].str
 		}
-	case 103:
+	case 106:
 		yyDollar = yyS[yypt-1 : yypt+1]
-//line src/Interpreter/parser/spanner.go.y:624
+//line src/Interpreter/parser/spanner.go.y:641
 		{
 			yyVAL.str = yyDollar[1].str
 		}

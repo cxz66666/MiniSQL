@@ -113,6 +113,7 @@ LOOP:
 			fmt.Println(item)
 			if item.GetOperationType()==types.Select {
 				if item.(types.SelectStatement).Where!=nil {
+				fmt.Println(item.(types.SelectStatement).Where.Expr.GetTargetCols())
 					item.(types.SelectStatement).Where.Expr.Debug()
 				}
 			}

@@ -62,7 +62,6 @@ type DStatements interface {
 
 // Column is a table column.
 
-
 type Column struct {
 	Name    string
 	Type    ColumnType
@@ -181,23 +180,42 @@ type (
 		Expr Expr
 	}
 	Expr interface {
-		Evaluate(cols []string,row []value.Value)(bool, error)
+		Evaluate(row []value.Value)(bool, error)
 		GetTargetCols()[]string
 		Debug()
+		GetTargetColsNum()int
 	}
-	ComparisonExpr struct {
+	ComparisonExprLSRV struct {
 		Left string
 		Operator value.CompareType
 		Right value.Value
 	}
+	ComparisonExprLVRS struct {
+		Left value.Value
+		Operator value.CompareType
+		Right string
+	}
+	ComparisonExprLVRV struct {
+		Left value.Value
+		Operator value.CompareType
+		Right value.Value
+	}
+	ComparisonExprLSRS struct {
+		Left string
+		Operator value.CompareType
+		Right string
+	}
 	AndExpr struct {
 		Left,Right Expr
+		LeftNum,RightNum int
 	}
 	OrExpr struct {
 		Left,Right Expr
+		LeftNum,RightNum int
 	}
 	NotExpr struct {
 		Expr Expr
+		LeftNum int
 	}
 	Limit struct {
 		Offset, Rowcount int
@@ -216,29 +234,23 @@ type (
 	}
 )
 
-func (e *ComparisonExpr)Evaluate(cols []string,row []value.Value)(bool,error)  {
-	hit:=false
-	idx:=0
-	for i,col:=range cols{
-		if col==e.Left{
-			hit=true
-			idx=i
-			break
-		}
-	}
-	if !hit {
-		return true,nil
-	}
-	val := row[idx]
-	if _,ok:=val.(value.Null);ok{
-		if _, iok := e.Right.(value.Null); iok {
+func (e *ComparisonExprLSRV)Evaluate(row []value.Value)(bool,error)  {
+
+	val := row[0]
+	if _,ok:=val.(value.Null);ok{ //left string's value is NULL
+		if _, iok := e.Right.(value.Null); iok {  //right is also NULL
 			if e.Operator==value.Equal {
 				return true, nil
 			}
 			return false, nil
+		} else {
+			if e.Operator==value.NotEqual {
+				return true,nil
+			}
+			return false,nil
 		}
 	}
-	if _, ok := e.Right.(value.Null); ok {
+	if _, ok := e.Right.(value.Null); ok { //left not NULL
 		if e.Operator == value.NotEqual {
 			return true, nil
 		}
@@ -246,18 +258,111 @@ func (e *ComparisonExpr)Evaluate(cols []string,row []value.Value)(bool,error)  {
 	}
 	return e.Right.SafeCompare(val,e.Operator)
 }
-func (e *ComparisonExpr) GetTargetCols() []string {
+func (e *ComparisonExprLSRV) GetTargetCols() []string {
 	return []string{e.Left}
 }
-func (e *ComparisonExpr)Debug()  {
+func (e *ComparisonExprLSRV) GetTargetColsNum() int {
+	return 1
+}
+func (e *ComparisonExprLSRV)Debug()  {
 	fmt.Println(e.Left,e.Operator,e.Right.String())
 }
-func (e *AndExpr) Evaluate(cols []string, row []value.Value) (bool, error) {
-	leftOk, err := e.Left.Evaluate(cols, row)
+
+
+func (e *ComparisonExprLVRS)Evaluate(row []value.Value)(bool,error)  {
+	val := row[0]
+	if _,ok:=val.(value.Null);ok{
+		if _, iok := e.Left.(value.Null); iok {
+			if e.Operator==value.Equal {
+				return true, nil
+			}
+			return false, nil
+		} else {
+			if e.Operator==value.NotEqual {
+				return true,nil
+			}
+			return false,nil
+		}
+	}
+	if _, ok := e.Left.(value.Null); ok {
+		if e.Operator == value.NotEqual {
+			return true, nil
+		}
+		return false, nil
+	}
+	return e.Left.SafeCompare(val,e.Operator)
+}
+func (e *ComparisonExprLVRS) GetTargetCols() []string {
+	return []string{e.Right}
+}
+func (e *ComparisonExprLVRS) GetTargetColsNum() int {
+	return 1
+}
+func (e *ComparisonExprLVRS)Debug()  {
+	fmt.Println(e.Left.String(),e.Operator,e.Right)
+}
+
+
+
+func (e *ComparisonExprLVRV)Evaluate(row []value.Value)(bool,error)  {
+	return e.Left.SafeCompare(e.Right,e.Operator)
+}
+func (e *ComparisonExprLVRV) GetTargetCols() []string {
+	return []string{}
+}
+func (e *ComparisonExprLVRV) GetTargetColsNum() int {
+	return 0
+}
+func (e *ComparisonExprLVRV)Debug()  {
+	fmt.Println(e.Left.String(),e.Operator,e.Right.String())
+}
+
+
+func (e *ComparisonExprLSRS)Evaluate(row []value.Value)(bool,error)  {
+	vall := row[0]
+	valr := row[1]
+	if _,ok:=vall.(value.Null);ok{  //left is NULL
+		if _, iok := valr.(value.Null); iok { //right is also NULL
+			if e.Operator==value.Equal {
+				return true, nil
+			}  //
+			return false, nil
+		}  else {
+			if e.Operator==value.NotEqual {
+				return true,nil
+			}
+			return false,nil
+		}
+	}
+	if _, ok := valr.(value.Null); ok {
+		if e.Operator == value.NotEqual {
+			return true, nil
+		}
+		return false, nil
+	}
+	return valr.SafeCompare(vall,e.Operator)
+}
+func (e *ComparisonExprLSRS) GetTargetCols() []string {
+	return []string{e.Left,e.Right}
+}
+func (e *ComparisonExprLSRS) GetTargetColsNum() int {
+	return 2
+}
+func (e *ComparisonExprLSRS)Debug()  {
+	fmt.Println(e.Left,e.Operator,e.Right)
+}
+
+
+
+
+
+
+func (e *AndExpr) Evaluate(row []value.Value) (bool, error) {
+	leftOk, err := e.Left.Evaluate(row[0:e.LeftNum])
 	if err != nil {
 		return false, err
 	}
-	rightOk, err := e.Right.Evaluate(cols, row)
+	rightOk, err := e.Right.Evaluate(row[e.LeftNum:e.LeftNum+e.RightNum])
 	if err != nil {
 		return false, err
 	}
@@ -270,21 +375,24 @@ func (e *AndExpr) Evaluate(cols []string, row []value.Value) (bool, error) {
 func (e *AndExpr) GetTargetCols() []string {
 	return append(e.Left.GetTargetCols(), e.Right.GetTargetCols()...)  //maybe with duplicate
 }
+func (e *AndExpr) GetTargetColsNum() int {
+	return e.LeftNum+e.RightNum
+}
 func (e *AndExpr)Debug() {
 	e.Left.Debug()
 	fmt.Println(" and ")
 	e.Right.Debug()
 }
 
-func (e *OrExpr) Evaluate(cols []string, row []value.Value) (bool, error) {
-	leftOk, err := e.Left.Evaluate(cols, row)
+func (e *OrExpr) Evaluate(row []value.Value) (bool, error) {
+	leftOk, err := e.Left.Evaluate(row[0:e.LeftNum])
 	if err != nil {
 		return false, err
 	}
 	if leftOk {
 		return true, nil
 	}
-	rightOk, err := e.Right.Evaluate(cols, row)
+	rightOk, err := e.Right.Evaluate(row[e.LeftNum:e.LeftNum+e.RightNum])
 	if err != nil {
 		return false, err
 	}
@@ -293,14 +401,17 @@ func (e *OrExpr) Evaluate(cols []string, row []value.Value) (bool, error) {
 func (e *OrExpr) GetTargetCols() []string {
 	return append(e.Left.GetTargetCols(), e.Right.GetTargetCols()...)
 }
+func (e *OrExpr) GetTargetColsNum() int {
+	return e.LeftNum+e.RightNum
+}
 func (e *OrExpr)Debug() {
 	e.Left.Debug()
 	fmt.Println( " or " )
 	e.Right.Debug()
 
 }
-func (e *NotExpr) Evaluate(cols []string, row []value.Value) (bool, error) {
-	ok, err := e.Expr.Evaluate(cols, row)
+func (e *NotExpr) Evaluate(row []value.Value) (bool, error) {
+	ok, err := e.Expr.Evaluate(row)
 	if err != nil {
 		return false, err
 	}
@@ -308,6 +419,9 @@ func (e *NotExpr) Evaluate(cols []string, row []value.Value) (bool, error) {
 }
 func (e *NotExpr) GetTargetCols() []string {
 	return e.Expr.GetTargetCols()
+}
+func (e *NotExpr) GetTargetColsNum() int {
+	return e.LeftNum
 }
 func (e *NotExpr)Debug() {
 	e.Expr.Debug()

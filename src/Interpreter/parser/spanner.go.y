@@ -506,19 +506,36 @@ expr_opt:
     }
     | IDENT_ALL compare_type value
     {
-	$$= &types.ComparisonExpr{Left: $1,Operator:$2, Right:$3 }
+	$$= &types.ComparisonExprLSRV{Left: $1,Operator:$2, Right:$3 }
+    }
+    |  value compare_type IDENT_ALL
+    {
+	$$= &types.ComparisonExprLVRS{Left: $1,Operator:$2, Right:$3 }
+    }
+    |  value compare_type value
+    {
+	$$= &types.ComparisonExprLVRV{Left: $1,Operator:$2, Right:$3 }
+    }
+    |  IDENT_ALL compare_type IDENT_ALL
+    {
+	$$= &types.ComparisonExprLSRS{Left: $1,Operator:$2, Right:$3 }
     }
     | expr_opt AND expr_opt
     {
-    	$$=&types.AndExpr{Left:$1,Right:$3}
+        left:=$1
+        right:=$3
+    	$$=&types.AndExpr{Left:left,Right:right,LeftNum:left.GetTargetColsNum(),RightNum:right.GetTargetColsNum(),}
     }
     | expr_opt OR expr_opt
     {
-    	$$=&types.OrExpr{Left:$1,Right:$3}
+        left:=$1
+        right:=$3
+    	$$=&types.OrExpr{Left:left,Right:right,LeftNum:left.GetTargetColsNum(),RightNum:right.GetTargetColsNum(),}
     }
     | NOT expr_opt
     {
-    	$$=&types.NotExpr{Expr:$2}
+        left:=$2
+    	$$=&types.NotExpr{Expr:left,LeftNum:left.GetTargetColsNum(),}
     }
 
 value_list:

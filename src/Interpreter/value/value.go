@@ -3,6 +3,8 @@ package value
 
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 )
 type CompareType int
@@ -14,10 +16,20 @@ const (
 	Equal
 	NotEqual
 )
+type ValueType int
+const (
+	IntType ValueType=iota
+	FloatType
+	BytesType
+	BoolType
+	NUllType
+	AlienTYpe
+)
 type Value interface {
 	String()string
 	Compare(Value, CompareType)(bool,error)
 	SafeCompare(Value,CompareType)(bool,error)
+	Convert2Bytes() ([]byte,error)
 }
 type Int struct {
 	Val int64
@@ -32,7 +44,7 @@ type Bool struct {
 	Val bool
 }
 type Null struct{
-
+	length int
 }
 type Alien struct {
 	Val interface{}
@@ -88,6 +100,13 @@ func (i Int)SafeCompare(v Value,op CompareType)(bool,error) {
 	}
 	return false,nil
 }
+func (i Int)Convert2Bytes() ([]byte,error) {
+	bytebuf := bytes.NewBuffer([]byte{})
+	binary.Write(bytebuf, binary.LittleEndian, i.Val)
+	return bytebuf.Bytes(),nil
+}
+
+
 func (i Float) String() string {
 	return fmt.Sprint(i.Val)
 }
@@ -120,6 +139,12 @@ func (i Float)SafeCompare(v Value,op CompareType)(bool,error) {
 	}
 	return false,nil
 }
+func (i Float)Convert2Bytes() ([]byte,error) {
+	bytebuf := bytes.NewBuffer([]byte{})
+	binary.Write(bytebuf, binary.LittleEndian, i.Val)
+	return bytebuf.Bytes(),nil
+}
+
 func (i Bytes) String() string {
 	var ans []byte
 	for _,v:=range i.Val{
@@ -226,6 +251,10 @@ func (i Bytes)SafeCompare(v Value,op CompareType)(bool,error) {
 	}
 	return false,nil
 }
+func (i Bytes)Convert2Bytes() ([]byte,error) {
+	return i.Val,nil
+}
+
 func (i Bool) String() string {
 	return fmt.Sprint(i.Val)
 }
@@ -252,6 +281,14 @@ func (i Bool)SafeCompare(v Value,op CompareType)(bool,error) {
 	}
 	return false,nil
 }
+func (i Bool)Convert2Bytes() ([]byte,error) {
+	if i.Val {
+		return []byte{1},nil
+	}
+	return []byte{0},nil
+}
+
+
 func (i Alien) String() string  {
 	return fmt.Sprint(i.Val)
 }
@@ -278,6 +315,12 @@ func (i Alien)SafeCompare(v Value,op CompareType)(bool,error) {
 	}
 	return false,nil
 }
+func (i Alien)Convert2Bytes() ([]byte,error) {
+	bytebuf := bytes.NewBuffer([]byte{})
+	binary.Write(bytebuf, binary.LittleEndian, i.Val)
+	return bytebuf.Bytes(),nil
+}
+
 
 func (i Null) String() string  {
 	return "null"
@@ -293,6 +336,9 @@ func (i Null)SafeCompare(v Value,op CompareType)(bool,error) {
 		return i.Compare(v,op)
 	}
 	return false,nil
+}
+func (i Null)Convert2Bytes() ([]byte,error) {
+	return make([]byte,i.length),nil
 }
 
 func NewFromParquetValue(v interface{}) Value {
