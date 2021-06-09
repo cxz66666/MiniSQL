@@ -11,10 +11,10 @@ const (
 	False = false
 )
 
-type OnDelete int
-type KeyOrder int
-type ScalarColumnTypeTag int
-type OperationType int
+type OnDelete=int
+type KeyOrder=int
+type ScalarColumnTypeTag=int
+type OperationType=int
 const (
 	NoAction OnDelete = iota
 	Cascade
@@ -67,6 +67,7 @@ type Column struct {
 	Type    ColumnType
 	Unique bool
 	NotNull bool
+	ColumnPos int   //the created position when table is created, this value is fixed
 }
 
 type ColumnType struct {
@@ -113,7 +114,7 @@ func (c CreateDatabaseStatement)GetOperationType() OperationType {
 // CreateTableStatement is a 'CREATE TABLE' statement info.
 type CreateTableStatement struct {
 	TableName   string
-	Columns     []Column
+	ColumnsMap    map[string]Column
 	PrimaryKeys []Key
 	Cluster     Cluster
 }

@@ -48,9 +48,8 @@ func CreateDatabase(databaseId string) error {
 	}
 	minisqlCatalog.Databases=append(minisqlCatalog.Databases,DatabaseCatalog{
 		DatabaseId: databaseId,
-		TableNum: 0,
 	})
-	fmt.Println(minisqlCatalog.Databases)
+	//fmt.Println(minisqlCatalog.Databases)
 	return FlushDbMeta()
 }
 
@@ -60,6 +59,10 @@ func UseDatabase(databaseId string) error  {
 	}
 	if databaseId==UsingDatabase.DatabaseId {
 		return nil
+	}
+
+	if len(UsingDatabase.DatabaseId)>0 { //write the last database index back
+		FlushDatabaseMeta(UsingDatabase.DatabaseId)
 	}
 	filePos:=FolderPosition+DatabaseNamePrefix+databaseId
 	UsingDatabase,_=GetDatabaseCatalog(databaseId)
@@ -72,39 +75,45 @@ func UseDatabase(databaseId string) error  {
 		}
 	} else {
 		f,err:=os.Open(filePos)
+		defer f.Close()
 		if err!=nil{
 			return errors.New("Can't open " + databaseId + "'s index file")
 		}
 		rd:=msgp.NewReader(f)
 		TableCatalogMap=make(map[string]*TableCatalog)
-		for i:=0;i<UsingDatabase.TableNum;i++{
-			tmpTableCatalog:=TableCatalog{}
-			err=tmpTableCatalog.DecodeMsg(rd)
-			if err!=nil {
-				continue
-			}
-			fmt.Println(tmpTableCatalog)
+		tmpTableCatalog:=new(TableCatalog)
+
+		for err:=tmpTableCatalog.DecodeMsg(rd);err==nil;{
 			if len(tmpTableCatalog.TableName)>0 {
-				TableCatalogMap[tmpTableCatalog.TableName]=&tmpTableCatalog
+				TableCatalogMap[tmpTableCatalog.TableName]=tmpTableCatalog
+			} else {
+				break
 			}
+			tmpTableCatalog=new(TableCatalog)
 		}
 	}
 	return nil
 }
+
 func DropDatabase(databaseId string) error  {
+	if !ExistDatabase(databaseId) {
+		return errors.New("Drop table "+databaseId+" doesn't exist")
+	}
+	if UsingDatabase.DatabaseId==databaseId {
+		UsingDatabase=DatabaseCatalog{}
+		TableCatalogMap=make(map[string]*TableCatalog)
+	}
 	filePos:=FolderPosition+DatabaseNamePrefix+databaseId
 	for index,item:=range minisqlCatalog.Databases {
 		if item.DatabaseId==databaseId {
-			delete(TableCatalogMap, databaseId)
 			minisqlCatalog.Databases=append(minisqlCatalog.Databases[:index],minisqlCatalog.Databases[index+1:]...)
+			fmt.Println(minisqlCatalog.Databases)
 			if Utils.Exists(filePos) {
+				fmt.Println(filePos)
 			   _ =	Utils.RemoveFile(filePos)
 			}
 			return FlushDbMeta()
 		}
-	}
-	if _,ok:=TableCatalogMap[databaseId];ok {
-		return errors.New("Index data failed to synchronize correctly, please try to restart")
 	}
 	return errors.New("database '"+databaseId+"' is not exist")
 }
@@ -115,12 +124,11 @@ func FlushDatabaseMeta(databaseId string) error  {
 	filePos:=FolderPosition+DatabaseNamePrefix+databaseId
 	if !Utils.Exists(filePos) {
 		f,err=Utils.CreateFile(filePos)
-
 		if err !=nil {
 			return errors.New("create file meta of "+databaseId+ "fail")
 		}
 	} else {
-		f,err=os.OpenFile(filePos,os.O_RDWR,0666)
+		f,err=os.OpenFile(filePos,os.O_WRONLY|os.O_TRUNC,0666)
 		if err !=nil {
 			return errors.New("open file meta of "+databaseId+ "fail")
 		}
@@ -135,5 +143,4 @@ func FlushDatabaseMeta(databaseId string) error  {
 		}
 	}
 	return wt.Flush()
-
 }

@@ -1,10 +1,15 @@
 package CatalogManager
 
+import (
+	"encoding/json"
+	"minisql/src/Interpreter/types"
+)
+
 //go:generate msgp
-type OnDelete int
-type KeyOrder int
-type ScalarColumnTypeTag int
-type OperationType int
+type OnDelete=int
+type KeyOrder=int
+type ScalarColumnTypeTag=int
+type OperationType=int
 
 const FolderPosition="./data/"
 const MiniSqlCatalogName="minisql.meta"
@@ -17,6 +22,8 @@ const (
 	Bytes
 	Date
 	Timestamp
+	Null
+	Alien
 )
 const (
 	NoAction OnDelete = iota
@@ -31,6 +38,7 @@ type Column struct {
 	Type    ColumnType
 	Unique bool
 	NotNull bool
+	ColumnPos int   //the created position when table is created, this value is fixed
 }
 
 type ColumnType struct {
@@ -50,13 +58,13 @@ type Cluster struct {
 }
 type TableCatalog struct {
 	TableName   string
-	Columns     []Column
+	ColumnsMap  map[string]Column
 	PrimaryKeys []Key
 	Cluster     Cluster
 	Indexs      []IndexCatalog
-	recordCnt   int //recordCnt means the now record number
-	recordTotal int //recordTotal means the total number
-	recordLength int// a record length contains 3 parts, headers,record and tail ptr
+	RecordCnt   int //RecordCnt means the now record number
+	RecordTotal int //RecordTotal means the total number
+	RecordLength int//RecordLength means a record length contains 3 parts, a vaild part , null bitmap, and record . use byte as the unit
 }
 
 
@@ -81,9 +89,16 @@ type IndexCatalog struct {
 
 type DatabaseCatalog struct {
 	DatabaseId string
-	TableNum   int
 }
 
 type MiniSqlCatalog struct {
 	Databases    []DatabaseCatalog
+}
+
+
+func CreateTableStatement2TableCatalog(a *types.CreateTableStatement) *TableCatalog  {
+	aj,_:=json.Marshal(&a)
+	b:=new(TableCatalog)
+	_=json.Unmarshal(aj,b)
+	return b
 }

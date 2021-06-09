@@ -14,7 +14,7 @@ const MiniSqlCatalogPos = FolderPosition+MiniSqlCatalogName
 //And if file is not exits, it will create it and return nil
 func LoadDbMeta() error {
 
-	if !Utils.Exists(FolderPosition) {
+	if !Utils.Exists(FolderPosition) { //no folder
 		err:=Utils.CreateDir(FolderPosition);
 		if err!=nil {
 			return errors.New("无法创建根文件夹")
@@ -28,8 +28,18 @@ func LoadDbMeta() error {
 		wt:=msgp.NewWriter(f)
 		err=newCatalog.EncodeMsg(wt)
 		return err
+	} else if !Utils.Exists(MiniSqlCatalogPos) { //no minisql.meta
+		f,err:= Utils.CreateFile(MiniSqlCatalogPos)
+		defer f.Close()
+		if err!=nil {
+			return errors.New("无法创建索引文件")
+		}
+		newCatalog:=MiniSqlCatalog{}
+		wt:=msgp.NewWriter(f)
+		err=newCatalog.EncodeMsg(wt)
+		return err
 	}
-
+	//have folder and minisql.meta
 	f,err:=os.OpenFile(MiniSqlCatalogPos,os.O_RDWR,0666)
 	defer f.Close()
 	if err!=nil{
@@ -44,12 +54,13 @@ func LoadDbMeta() error {
 }
 
 func FlushDbMeta() error {
-	f,err:=os.OpenFile(MiniSqlCatalogPos,os.O_RDWR,0666)
+	f,err:=os.OpenFile(MiniSqlCatalogPos,os.O_WRONLY|os.O_TRUNC,0666)
 	defer f.Close()
 	if err!=nil{
 		return errors.New("文件打开失败")
 	}
 	wt:=msgp.NewWriter(f)
+	//fmt.Println(minisqlCatalog)
 	err=minisqlCatalog.EncodeMsg(wt)
 	if err!=nil {
 		return errors.New("根索引写入失败")

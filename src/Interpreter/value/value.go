@@ -16,20 +16,24 @@ const (
 	Equal
 	NotEqual
 )
-type ValueType int
+type ValueType=int
 const (
-	IntType ValueType=iota
+	BoolType ValueType = iota
+	IntType
 	FloatType
+	StringType
 	BytesType
-	BoolType
-	NUllType
-	AlienTYpe
+	DateType
+	TimestampType
+	NullType
+	AlienType
 )
 type Value interface {
 	String()string
 	Compare(Value, CompareType)(bool,error)
 	SafeCompare(Value,CompareType)(bool,error)
 	Convert2Bytes() ([]byte,error)
+	Convert2IntType()(int)
 }
 type Int struct {
 	Val int64
@@ -105,7 +109,9 @@ func (i Int)Convert2Bytes() ([]byte,error) {
 	binary.Write(bytebuf, binary.LittleEndian, i.Val)
 	return bytebuf.Bytes(),nil
 }
-
+func (i Int)Convert2IntType() int {
+	return IntType
+}
 
 func (i Float) String() string {
 	return fmt.Sprint(i.Val)
@@ -143,6 +149,9 @@ func (i Float)Convert2Bytes() ([]byte,error) {
 	bytebuf := bytes.NewBuffer([]byte{})
 	binary.Write(bytebuf, binary.LittleEndian, i.Val)
 	return bytebuf.Bytes(),nil
+}
+func (i Float)Convert2IntType() int {
+	return FloatType
 }
 
 func (i Bytes) String() string {
@@ -254,6 +263,9 @@ func (i Bytes)SafeCompare(v Value,op CompareType)(bool,error) {
 func (i Bytes)Convert2Bytes() ([]byte,error) {
 	return i.Val,nil
 }
+func (i Bytes)Convert2IntType() int {
+	return BytesType
+}
 
 func (i Bool) String() string {
 	return fmt.Sprint(i.Val)
@@ -287,7 +299,9 @@ func (i Bool)Convert2Bytes() ([]byte,error) {
 	}
 	return []byte{0},nil
 }
-
+func (i Bool)Convert2IntType() int {
+	return BoolType
+}
 
 func (i Alien) String() string  {
 	return fmt.Sprint(i.Val)
@@ -320,7 +334,9 @@ func (i Alien)Convert2Bytes() ([]byte,error) {
 	binary.Write(bytebuf, binary.LittleEndian, i.Val)
 	return bytebuf.Bytes(),nil
 }
-
+func (i Alien)Convert2IntType() int {
+	return  AlienType
+}
 
 func (i Null) String() string  {
 	return "null"
@@ -340,7 +356,9 @@ func (i Null)SafeCompare(v Value,op CompareType)(bool,error) {
 func (i Null)Convert2Bytes() ([]byte,error) {
 	return make([]byte,i.length),nil
 }
-
+func (i Null)Convert2IntType() int {
+	return NullType
+}
 func NewFromParquetValue(v interface{}) Value {
 	switch v.(type) {
 	case int:

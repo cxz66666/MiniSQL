@@ -127,9 +127,14 @@ create_database:
 create_table:
   CREATE TABLE table_name '(' column_def_list primary_key ')'  cluster_opt
   {
+    tmpmap:=make(map[string]types.Column)
+    for index,item:=range $5 {
+      item.ColumnPos=index
+      tmpmap[item.Name]=item
+    }
     s := types.CreateTableStatement{
       TableName:   $3,
-      Columns:     $5,
+      ColumnsMap:  tmpmap   ,
       PrimaryKeys: $6,
       Cluster:     $8,
     }
