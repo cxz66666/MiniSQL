@@ -46,7 +46,7 @@ func createTableInitAndCheck(statement *TableCatalog) error  {
 		columnNum+=1
 	}
 	recordlength+=(columnNum)/8+1  //bit map and a vaild part!!
-	bytesPos[0]+=(columnNum)/8+1
+	bytesPos[0]=(columnNum)/8+1
 	for i:=1;i<len(statement.ColumnsMap);i++{
 		bytesPos[i]+=bytesPos[i-1]
 	}

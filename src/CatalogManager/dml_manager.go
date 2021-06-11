@@ -8,8 +8,7 @@ import (
 //TODO NULL CHECK, if a value is null, now we can't check it!
 func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 	var table *TableCatalog
-	columnPositions:=make([]int,0,10)
-	startBytePos:=make([]int,0,10)
+
 	var  ok bool
 	if len(UsingDatabase.DatabaseId)==0 {
 		return errors.New("no using database， please use 'use database' before Insert"),nil,nil
@@ -17,7 +16,12 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 	if table,ok=TableName2CatalogMap[statement.TableName];!ok { //
 		return errors.New("don't have a table named "+statement.TableName+" ,please use create to build it"),nil,nil
 	}
+	var columnPositions []int
+	var startBytePos []int
+
 	if len(statement.ColumnNames)==0 { //insert all
+		columnPositions=make([]int,len(statement.Values))
+		startBytePos=make([]int,len(statement.Values))
 		if len(statement.Values)!=len(table.ColumnsMap) {
 			return errors.New("input numbers don't fit the column type"),nil,nil
 		}
@@ -27,17 +31,16 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 			if !(pos<valueNumber && column.Type.TypeTag== statement.Values[pos].Convert2IntType()) {
 				return errors.New(fmt.Sprintf("column %s need a type %s, but your input value is %s",column.Name,ColumnType2StringName(column.Type.TypeTag),statement.Values[pos].String())),nil,nil
 			}
-			startByte:=column.StartBytesPos
-			if pos>=len(startBytePos) {
-				startBytePos=append(startBytePos,make([]int,pos)...)
-			}
-			startBytePos[pos]=startByte
+			startBytePos[column.ColumnPos]= column.StartBytesPos
 		}
 		for i:=0;i<len(statement.Values);i++ {
-				columnPositions=append(columnPositions,i)
+			//append 0,1,2,3...
+				columnPositions[i]=i
 		}
 
 	} else {    //insert (a,b,c)
+		columnPositions=make([]int,0)
+		startBytePos=make([]int,0)
 		for index,colName:=range statement.ColumnNames {
 			var col Column
 			if col,ok=table.ColumnsMap[colName];!ok {
@@ -47,6 +50,7 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 				return errors.New(fmt.Sprintf("column %s need a type %s, but your input value is %s",col.Name,ColumnType2StringName(col.Type.TypeTag),statement.Values[index].String())),nil,nil
 			}
 			columnPositions=append(columnPositions,col.ColumnPos)
+			startBytePos=append(startBytePos,col.StartBytesPos)
 		}
 	}
 	return nil,columnPositions,startBytePos
