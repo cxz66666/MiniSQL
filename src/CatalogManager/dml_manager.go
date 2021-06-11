@@ -13,7 +13,7 @@ func InsertCheck(statement types.InsertStament) (error,[]int) {
 	if len(UsingDatabase.DatabaseId)==0 {
 		return errors.New("no using database， please use 'use database' before Insert"),nil
 	}
-	if table,ok=TableCatalogMap[statement.TableName];!ok { //
+	if table,ok=TableName2CatalogMap[statement.TableName];!ok { //
 		return errors.New("don't have a table named "+statement.TableName+" ,please use create to build it"),nil
 	}
 	if len(statement.ColumnNames)==0 { //insert all
@@ -24,10 +24,10 @@ func InsertCheck(statement types.InsertStament) (error,[]int) {
 		for _,column:=range table.ColumnsMap {
 			pos:=column.ColumnPos
 			if !(pos<valueNumber && column.Type.TypeTag== statement.Values[pos].Convert2IntType()) {
-				return errors.New(fmt.Sprintf("column %s need a type %d, but your input type is %s",column.Name,column.Type.TypeTag,statement.Values[pos].String())),nil
+				return errors.New(fmt.Sprintf("column %s need a type %s, but your input value is %s",column.Name,ColumnType2StringName(column.Type.TypeTag),statement.Values[pos].String())),nil
 			}
 		}
-		for i:=0;i<len(statement.ColumnNames);i++ {
+		for i:=0;i<len(statement.Values);i++ {
 				columnPositions=append(columnPositions,i)
 		}
 
@@ -38,7 +38,7 @@ func InsertCheck(statement types.InsertStament) (error,[]int) {
 				return errors.New("don't have a column named "+colName+" ,please check your table"),nil
 			}
 			if col.Type.TypeTag!=statement.Values[index].Convert2IntType() {
-				return errors.New("column "+col.Name+" have a invaild type input"),nil
+				return errors.New(fmt.Sprintf("column %s need a type %s, but your input value is %s",col.Name,ColumnType2StringName(col.Type.TypeTag),statement.Values[index].String())),nil
 			}
 			columnPositions=append(columnPositions,col.ColumnPos)
 		}
@@ -54,7 +54,7 @@ func DeleteCheck(statement types.DeleteStatement) (error,[]int)  {
 	if len(UsingDatabase.DatabaseId)==0 {
 		return errors.New("no using database， please use 'use database' before Insert"),nil
 	}
-	if table,ok=TableCatalogMap[statement.TableName];!ok { //
+	if table,ok=TableName2CatalogMap[statement.TableName];!ok { //
 		return errors.New("don't have a table named "+statement.TableName+" ,please use create to build it"),nil
 	}
 	err,wherePositions=whereOptCheck(statement.Where,table)
@@ -72,7 +72,7 @@ func UpdateCheck(statement types.UpdateStament)  (error,[]int,[]int)  {
 	if len(UsingDatabase.DatabaseId)==0 {
 		return errors.New("no using database， please use 'use database' before Insert"),nil,nil
 	}
-	if table,ok=TableCatalogMap[statement.TableName];!ok { //
+	if table,ok=TableName2CatalogMap[statement.TableName];!ok { //
 		return errors.New("don't have a table named "+statement.TableName+" ,please use create to build it"),nil,nil
 	}
 	err,wherePositions=whereOptCheck(statement.Where,table)
@@ -88,7 +88,7 @@ func UpdateCheck(statement types.UpdateStament)  (error,[]int,[]int)  {
 			return errors.New("don't have a column named "+item.Left),nil,nil
 		}
 		if item.Right.Convert2IntType()!=column.Type.TypeTag {
-			return errors.New(fmt.Sprintf("column %s need a type %d, but your input type is %s",column.Name,column.Type.TypeTag,item.Right.String())),nil,nil
+			return errors.New(fmt.Sprintf("column %s need a type %d, but your input value is %s",column.Name,column.Type.TypeTag,item.Right.String())),nil,nil
 		}
 		setExprPosition=append(setExprPosition,column.ColumnPos)
 	}
@@ -105,7 +105,7 @@ func SelectCheck(statement types.SelectStatement) (error,[]int,[]int)  {
 		return errors.New("no using database， please use 'use database' before Insert"),nil,nil
 	}
 	for _,tablename:=range statement.TableNames {
-		if table,ok=TableCatalogMap[tablename];!ok { //
+		if table,ok=TableName2CatalogMap[tablename];!ok { //
 			return errors.New("don't have a table named "+tablename+" ,please use create to build it"),nil,nil
 		}
 	}
@@ -127,6 +127,9 @@ func SelectCheck(statement types.SelectStatement) (error,[]int,[]int)  {
 }
 
 func whereOptCheck(where *types.Where,table *TableCatalog) (error,[]int) {
+	if where==nil {
+		return nil,make([]int,0,1)
+	}
 	columnNames:=where.Expr.GetTargetCols()
 	position:=make([]int,0,len(columnNames)+1)
 	var targetColumn Column

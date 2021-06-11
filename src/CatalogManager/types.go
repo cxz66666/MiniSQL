@@ -11,6 +11,7 @@ type KeyOrder=int
 type ScalarColumnTypeTag=int
 type OperationType=int
 
+type TableCatalogMap map[string]*TableCatalog
 const FolderPosition="./data/"
 const MiniSqlCatalogName="minisql.meta"
 const DatabaseNamePrefix="d_"
@@ -39,6 +40,7 @@ type Column struct {
 	Unique bool
 	NotNull bool
 	ColumnPos int   //the created position when table is created, this value is fixed
+	StartBytesPos int //the start postion in record bytes array
 }
 
 type ColumnType struct {
@@ -81,7 +83,6 @@ type Interleave struct {
 type IndexCatalog struct {
 	IndexName     string
 	Unique        bool
-	TableName     string
 	Keys          []Key
 	StoringClause StoringClause
 	Interleaves   []Interleave
@@ -101,4 +102,30 @@ func CreateTableStatement2TableCatalog(a *types.CreateTableStatement) *TableCata
 	b:=new(TableCatalog)
 	_=json.Unmarshal(aj,b)
 	return b
+}
+
+func ColumnType2StringName(v ScalarColumnTypeTag) string {
+	switch v {
+	case Bool :
+		return "BOOL"
+	case Int64:
+		return "INT64"
+	case Float64:
+		return "FLOAT64"
+	case String:
+		return "STRING"
+	case Bytes:
+		return "CHARS"
+	case Date:
+		return "DATE"
+	case Timestamp:
+		return "TIMESTAMP"
+	case Null:
+		return "NULL"
+	case Alien:
+		return "ALIEN"
+	default:
+		return "UNKNOW"
+	}
+	return "UNKNOW"
 }

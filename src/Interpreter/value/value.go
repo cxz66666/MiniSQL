@@ -7,6 +7,8 @@ import (
 	"encoding/binary"
 	"fmt"
 )
+//go:generate msgp
+
 type CompareType int
 const (
 	Great CompareType=iota
@@ -34,6 +36,7 @@ type Value interface {
 	SafeCompare(Value,CompareType)(bool,error)
 	Convert2Bytes() ([]byte,error)
 	Convert2IntType()(int)
+
 }
 type Int struct {
 	Val int64

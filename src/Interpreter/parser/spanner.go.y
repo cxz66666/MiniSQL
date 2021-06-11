@@ -125,7 +125,7 @@ create_database:
   }
 
 create_table:
-  CREATE TABLE table_name '(' column_def_list primary_key ')'  cluster_opt
+  CREATE TABLE table_name '(' column_def_list ',' primary_key ')'  cluster_opt
   {
     tmpmap:=make(map[string]types.Column)
     for index,item:=range $5 {
@@ -135,11 +135,25 @@ create_table:
     s := types.CreateTableStatement{
       TableName:   $3,
       ColumnsMap:  tmpmap   ,
-      PrimaryKeys: $6,
-      Cluster:     $8,
+      PrimaryKeys: $7,
+      Cluster:     $9,
     }
     yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
   }
+  | CREATE TABLE table_name '(' column_def_list  ')'  cluster_opt
+      {
+        tmpmap:=make(map[string]types.Column)
+        for index,item:=range $5 {
+          item.ColumnPos=index
+          tmpmap[item.Name]=item
+        }
+        s := types.CreateTableStatement{
+          TableName:   $3,
+          ColumnsMap:  tmpmap   ,
+          Cluster:     $7,
+        }
+        yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+      }
 
 column_def_list:
   /* empty */
@@ -151,9 +165,9 @@ column_def_list:
     $$ = make([]types.Column, 0, 1)
     $$ = append($$, $1)
   }
-  | column_def ',' column_def_list
+  |  column_def_list ',' column_def
   {
-    $$ = append($3, $1)
+    $$ = append($1, $3)
   }
 
 column_def:

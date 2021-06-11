@@ -9,7 +9,7 @@ import (
 )
 var(
 	UsingDatabase DatabaseCatalog
-	TableCatalogMap map[string]*TableCatalog  //table name to catalog
+	TableName2CatalogMap TableCatalogMap  //table name to catalog
 )
 func ExistDatabase(databaseId string) bool   {
 	for _,item:=range minisqlCatalog.Databases {
@@ -80,16 +80,13 @@ func UseDatabase(databaseId string) error  {
 			return errors.New("Can't open " + databaseId + "'s index file")
 		}
 		rd:=msgp.NewReader(f)
-		TableCatalogMap=make(map[string]*TableCatalog)
-		tmpTableCatalog:=new(TableCatalog)
-
-		for err:=tmpTableCatalog.DecodeMsg(rd);err==nil;{
-			if len(tmpTableCatalog.TableName)>0 {
-				TableCatalogMap[tmpTableCatalog.TableName]=tmpTableCatalog
-			} else {
-				break
+		TableName2CatalogMap=make(map[string]*TableCatalog)
+		err=TableName2CatalogMap.DecodeMsg(rd)
+		if err!=nil {
+			if _,ok:=err.(msgp.Error);ok{
+				return  nil
 			}
-			tmpTableCatalog=new(TableCatalog)
+			return  err
 		}
 	}
 	return nil
@@ -101,7 +98,7 @@ func DropDatabase(databaseId string) error  {
 	}
 	if UsingDatabase.DatabaseId==databaseId {
 		UsingDatabase=DatabaseCatalog{}
-		TableCatalogMap=make(map[string]*TableCatalog)
+		TableName2CatalogMap=make(map[string]*TableCatalog)
 	}
 	filePos:=FolderPosition+DatabaseNamePrefix+databaseId
 	for index,item:=range minisqlCatalog.Databases {
@@ -117,8 +114,9 @@ func DropDatabase(databaseId string) error  {
 	}
 	return errors.New("database '"+databaseId+"' is not exist")
 }
-
+//FlushDatabaseMeta will write the TableName2CatalogMap datas to storage
 func FlushDatabaseMeta(databaseId string) error  {
+
 	var f *os.File
 	var err error
 	filePos:=FolderPosition+DatabaseNamePrefix+databaseId
@@ -135,12 +133,10 @@ func FlushDatabaseMeta(databaseId string) error  {
 	}
 	defer f.Close()
 	wt:=msgp.NewWriter(f)
-
-	for _,v:=range TableCatalogMap{
-		err=v.EncodeMsg(wt)
-		if err!=nil {
-			return err
-		}
+	err=TableName2CatalogMap.EncodeMsg(wt)
+	if err!=nil {
+		return err
 	}
 	return wt.Flush()
+
 }
