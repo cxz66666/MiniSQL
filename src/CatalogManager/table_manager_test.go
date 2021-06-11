@@ -65,6 +65,17 @@ var createtable=[]types.CreateTableStatement{
 				true,
 				1,
 			},
+			"fifth":{
+				"fifth",
+				types.ColumnType{
+					types.Bytes,
+					40,
+					false,
+				},
+				true,
+				true,
+				4,
+			},
 		},
 		[]types.Key{
 			{
@@ -82,7 +93,9 @@ var create_table_test_string=[]string{
 		"column1 int not null,\n" +
 		"column2 char(30),\n" +
 		"column3 float unique,\n" +
-		"column4 bytes(40)\n" +
+		"column4 bytes(40),\n" +
+		"column5 char(50) unique not null," +
+		"primary key (column1)" +
 		");",
 	"create table syf (" +
 		"column1 bytes(40),\n" +

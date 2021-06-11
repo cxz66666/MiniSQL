@@ -156,6 +156,7 @@ func (c DropTableStatement)GetOperationType() OperationType {
 
 // DropIndexStatement is a 'DROP INDEX' statement info.
 type DropIndexStatement struct {
+	TableName string
 	IndexName string
 }
 func (c DropIndexStatement)GetOperationType() OperationType {
