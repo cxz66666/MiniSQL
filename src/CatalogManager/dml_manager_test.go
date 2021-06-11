@@ -17,7 +17,7 @@ var deleteStatement=[]string{
 	"delete from syf;",
 }
 var updateStatement=[]string{
-	"update cxz set column1="
+	"update cxz set column1=",
 }
 //please use TestCreateTable to create table before use TestInsertCheck
 func TestInsertCheck(t *testing.T) {

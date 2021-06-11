@@ -36,12 +36,14 @@ func InsertRecord(table *CatalogManager.TableCatalog,columnPos []int,startBytePo
 }
 
 //SelectRecord 传入select的表，需要返回的字段的名称，where表达式，这是没有索引的
+//如果column为空，就认为是选择所有
 func SelectRecord(table *CatalogManager.TableCatalogMap,columns []string, where *types.Where) (error,[]value.Value) {
 	//TODO
 	//where maybe nil!!!!
 	return nil,make([]value.Value,0)
 }
 //SelectRecordWithIndex  传入select的表，需要返回的字段的名称，where表达式, index为左 string 右 value 中间是判断符的struct， string保证存在索引
+//如果column为空，就认为是选择所有
 func SelectRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,where *types.Where,index types.ComparisonExprLSRV) (error,[]value.Value) {
 	//TODO
 	//where maybe nil!!!!
@@ -63,14 +65,14 @@ func DeleteRecordWithIndex(table *CatalogManager.TableCatalog,where *types.Where
 }
 
 //UpdateRecord 传入update的表，准备更新的column，value数组，where参数 无索引
-func UpdateRecord(table *CatalogManager.TableCatalog,columns []string,values []string,where *types.Where) (error,[]value.Value) {
+func UpdateRecord(table *CatalogManager.TableCatalog,columns []string,values []value.Value,where *types.Where) (error,[]value.Value) {
 	//TODO
 	//where maybe nil!!!!
 	return nil,make([]value.Value,0)
 }
 
 //UpdateRecordWithIndex 传入update的表，准备更新的column，value数组，where参数 index为左 string 右 value 中间是判断符的struct， string保证存在索引
-func UpdateRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,values []string,where *types.Where,index types.ComparisonExprLSRV) (error,[]value.Value) {
+func UpdateRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,values []value.Value,where *types.Where,index types.ComparisonExprLSRV) (error,[]value.Value) {
 	//TODO
 	//where maybe nil!!!!
 	return nil,make([]value.Value,0)
