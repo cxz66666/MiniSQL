@@ -40,7 +40,6 @@ func HandleOneParse(statement types.DStatements) error  {
 
 func CreateDatabaseAPI(statement types.CreateDatabaseStatement)  error {
 	return CatalogManager.CreateDatabase(statement.DatabaseId)
-
 }
 
 func UseDatabaseAPI(statement types.UseDatabaseStatement) error  {
