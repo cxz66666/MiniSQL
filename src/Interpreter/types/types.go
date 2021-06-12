@@ -36,6 +36,7 @@ const (
 )
 const (
 	CreateDatabase OperationType= iota
+	UseDatabase
 	CreateTable
 	CreateIndex
 	DropTable
@@ -111,6 +112,16 @@ type CreateDatabaseStatement struct {
 func (c CreateDatabaseStatement)GetOperationType() OperationType {
 	return CreateDatabase
 }
+
+// UseDatabaseStatement is a 'Use DATABASE' statement info.
+type UseDatabaseStatement struct {
+	DatabaseId string
+}
+
+func (c UseDatabaseStatement)GetOperationType() OperationType {
+	return UseDatabase
+}
+
 // CreateTableStatement is a 'CREATE TABLE' statement info.
 type CreateTableStatement struct {
 	TableName   string

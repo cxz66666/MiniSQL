@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/peterh/liner"
+	"minisql/src/CatalogManager"
 	"minisql/src/Interpreter/parser"
 	"minisql/src/Interpreter/types"
 	"os"
@@ -16,6 +17,9 @@ const historyCommmandFile="~/.minisql_history"
 const firstPrompt="minisql>"
 const secondPrompt="      ->"
 
+func InitDB() error {
+	return 	CatalogManager.LoadDbMeta()
+}
 func expandPath(path string) (string,error)  {
 	if strings.HasPrefix(path, "~/") {
 		parts := strings.SplitN(path, "/", 2)
@@ -61,13 +65,14 @@ func runShell(r chan<- error)  {
 		if err !=nil{
 			panic(err)
 		}
-		file.Close()
+		_=file.Close()
 	}()
 	s:= bufio.NewScanner(file)
 	for s.Scan() {
 		//fmt.Println(s.Text())
 		ll.AppendHistory(s.Text())
 	}
+	InitDB()
 	var beginSQLParse=false
 	var sqlText=make([]byte,0,100)
 	for { //each sql

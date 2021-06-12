@@ -31,6 +31,9 @@ const (
 	NullType
 	AlienType
 )
+type Row struct {  // It's a row for record
+	Values []Value
+}
 //Value is the most important type!
 type Value interface {
 	String()string

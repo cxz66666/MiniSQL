@@ -157,7 +157,7 @@ func Benchmark_Compare(b *testing.B) {
 	b.Run("value and value compare with  give two value and a type", func(b *testing.B) {
 		for i := 0; i < b.N; i ++ {
 			for _,_case:=range cases1{
-				_,err:=CompareWithType(_case.left,_case.right,_case.op,)
+				_,err:=CompareWithType(_case.left,_case.right,_case.op,IntType)
 				if err!=nil{
 					b.Error(err)
 				}

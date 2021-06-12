@@ -23,6 +23,8 @@ var keywords = map[string]int{
 	"create" : 				  CREATE,
 	"DROP":                   DROP,
 	"drop":					  DROP,
+	"use": USE,
+	"USE":USE,
 	"DATABASE":               DATABASE,
 	"database":               DATABASE,
 	"TABLE":                  TABLE,

@@ -118,7 +118,7 @@ func TestCreateTable(t *testing.T) {
 	fmt.Println(UseDatabase("4564546"))
 
 	for _,item:=range createtable {
-		fmt.Println(CreateTable(item))
+		fmt.Println(CreateTableCheck(item))
 	}
 	for k,v:=range TableName2CatalogMap {
 		fmt.Println(k,*v)
@@ -133,7 +133,7 @@ func TestCreateTable(t *testing.T) {
 			fmt.Println(err)
 		}
 		fmt.Println(*items)
-		fmt.Println(CreateTable((*items)[0].(types.CreateTableStatement)))
+		fmt.Println(CreateTableCheck((*items)[0].(types.CreateTableStatement)))
 	}
 	for k,v:=range TableName2CatalogMap {
 		fmt.Println(k,*v)
@@ -168,7 +168,7 @@ func BenchmarkCreateTable(b *testing.B) {
 	for i:=0;i<b.N;i++ {
 		new_table:=createtable[0]
 		new_table.TableName=strconv.Itoa(i)
-		CreateTable(new_table)
+		CreateTableCheck(new_table)
 	}
 	fmt.Println(TableName2CatalogMap)
 }

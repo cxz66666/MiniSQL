@@ -82,7 +82,7 @@ func createTableInitAndCheck(statement *TableCatalog) error  {
 	return nil
 }
 
-func CreateTable(statement types.CreateTableStatement) error  {
+func CreateTableCheck(statement types.CreateTableStatement) error  {
 	if len(UsingDatabase.DatabaseId) ==0 {
 		return errors.New("Don't use database, please create table after using database")
 	}
@@ -101,7 +101,7 @@ func CreateTable(statement types.CreateTableStatement) error  {
 		return errors.New("fail to conver type, internal errors")
 	}
 
-	_= AddTableToCatalog(UsingDatabase.DatabaseId)
+	//_= AddTableToCatalog(UsingDatabase.DatabaseId)
 	return FlushDatabaseMeta(UsingDatabase.DatabaseId)
 }
 //DropTableCheck don't delete the map[id] and the catalog file, just check the legal
@@ -120,24 +120,28 @@ func DropTable(statement types.DropTableStatement) error  {
 		return err
 	}
 	delete(TableName2CatalogMap,statement.TableName)
-	_=DeleteTableToCatalog(UsingDatabase.DatabaseId)
+	//_=DeleteTableToCatalog(UsingDatabase.DatabaseId)
 	return 	FlushDatabaseMeta(UsingDatabase.DatabaseId)
 }
+//
+//func  AddTableToCatalog(databaseId string) error  {
+//	for _,item:=range minisqlCatalog.Databases {
+//		if item.DatabaseId==databaseId {
+//				return nil
+//		}
+//	}
+//	return errors.New("not found database")
+//}
+//
+//func DeleteTableToCatalog(databaseId string) error  {
+//	for _,item:=range minisqlCatalog.Databases {
+//		if item.DatabaseId==databaseId {
+//			return nil
+//		}
+//	}
+//	return errors.New("not found database")
+//}
 
-func  AddTableToCatalog(databaseId string) error  {
-	for _,item:=range minisqlCatalog.Databases {
-		if item.DatabaseId==databaseId {
-				return nil
-		}
-	}
-	return errors.New("not found database")
-}
-
-func DeleteTableToCatalog(databaseId string) error  {
-	for _,item:=range minisqlCatalog.Databases {
-		if item.DatabaseId==databaseId {
-			return nil
-		}
-	}
-	return errors.New("not found database")
+func GetTableCatalogUnsafe(tableName string) *TableCatalog  {
+	return TableName2CatalogMap[tableName]
 }

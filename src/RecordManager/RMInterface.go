@@ -37,43 +37,43 @@ func InsertRecord(table *CatalogManager.TableCatalog,columnPos []int,startBytePo
 
 //SelectRecord 传入select的表，需要返回的字段的名称，where表达式，这是没有索引的
 //如果column为空，就认为是选择所有
-func SelectRecord(table *CatalogManager.TableCatalogMap,columns []string, where *types.Where) (error,[]value.Value) {
+func SelectRecord(table *CatalogManager.TableCatalogMap,columns []string, where *types.Where) (error,[]value.Row) {
 	//TODO
 	//where maybe nil!!!!
-	return nil,make([]value.Value,0)
+	return nil,make([]value.Row,0)
 }
 //SelectRecordWithIndex  传入select的表，需要返回的字段的名称，where表达式, index为左 string 右 value 中间是判断符的struct， string保证存在索引
 //如果column为空，就认为是选择所有
-func SelectRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,where *types.Where,index types.ComparisonExprLSRV) (error,[]value.Value) {
+func SelectRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,where *types.Where,index types.ComparisonExprLSRV) (error,[]value.Row) {
 	//TODO
 	//where maybe nil!!!!
-	return nil,make([]value.Value,0)
+	return nil,make([]value.Row,0)
 }
 
-//DeleteRecord 传入delete的表，where表达式,无索引
-func DeleteRecord(table *CatalogManager.TableCatalog,where *types.Where) (error,[]value.Value) {
+//DeleteRecord 传入delete的表，where表达式,无索引  int返回删除了多少行
+func DeleteRecord(table *CatalogManager.TableCatalog,where *types.Where) (error,int) {
 	//TODO
 	//where maybe nil!!!!
-	return nil,make([]value.Value,0)
+	return nil,0
 }
 
-//DeleteRecordWithIndex  传入select的表，where表达式, index为左 string 右 value 中间是判断符的struct， string保证存在索引
-func DeleteRecordWithIndex(table *CatalogManager.TableCatalog,where *types.Where,index types.ComparisonExprLSRV) (error,[]value.Value)  {
+//DeleteRecordWithIndex  传入select的表，where表达式, index为左 string 右 value 中间是判断符的struct， string保证存在索引 int返回删除了多少行
+func DeleteRecordWithIndex(table *CatalogManager.TableCatalog,where *types.Where,index types.ComparisonExprLSRV) (error,int)  {
 	//TODO
 	//where maybe nil!!!!
-	return nil,make([]value.Value,0)
+	return nil,0
 }
 
-//UpdateRecord 传入update的表，准备更新的column，value数组，where参数 无索引
-func UpdateRecord(table *CatalogManager.TableCatalog,columns []string,values []value.Value,where *types.Where) (error,[]value.Value) {
+//UpdateRecord 传入update的表，准备更新的column，value数组，where参数 无索引 int返回删除了多少行
+func UpdateRecord(table *CatalogManager.TableCatalog,columns []string,values []value.Value,where *types.Where) (error,int) {
 	//TODO
 	//where maybe nil!!!!
-	return nil,make([]value.Value,0)
+	return nil,0
 }
 
 //UpdateRecordWithIndex 传入update的表，准备更新的column，value数组，where参数 index为左 string 右 value 中间是判断符的struct， string保证存在索引
-func UpdateRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,values []value.Value,where *types.Where,index types.ComparisonExprLSRV) (error,[]value.Value) {
+func UpdateRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,values []value.Value,where *types.Where,index types.ComparisonExprLSRV) (error,int) {
 	//TODO
 	//where maybe nil!!!!
-	return nil,make([]value.Value,0)
+	return nil,0
 }

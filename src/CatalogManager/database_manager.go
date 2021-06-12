@@ -51,6 +51,7 @@ func CreateDatabase(databaseId string) error {
 	})
 	//fmt.Println(minisqlCatalog.Databases)
 	return FlushDbMeta()
+
 }
 
 func UseDatabase(databaseId string) error  {

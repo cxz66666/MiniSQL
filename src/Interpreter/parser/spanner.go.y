@@ -50,7 +50,7 @@ import (
 %token<empty> '(' ',' ')' ';' '*'
 %left <str> '='  '<' '>' LE GE NE
 %token<str> CREATE  DROP
-%token<str> DATABASE TABLE INDEX STORING
+%token<str> USE DATABASE TABLE INDEX STORING
 %token<str> SELECT WHERE FROM LIMIT OFFSET VALUES
 %token<str> INSERT INTO UPDATE DELETE
 %token<str> BOOL INT64 FLOAT64 STRING BYTES DATE TIMESTAMP
@@ -106,6 +106,7 @@ statements:
 
 statement:
     create_database ';'
+  | use_database ';'
   | create_table ';'
   | create_index ';'
   | drop_database ';'
@@ -123,7 +124,14 @@ create_database:
     }
     yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
   }
-
+use_database:
+  USE DATABASE database_id
+  {
+    s:=types.UseDatabaseStatement{
+      DatabaseId: $3,
+    }
+    yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+  }
 create_table:
   CREATE TABLE table_name '(' column_def_list ',' primary_key ')'  cluster_opt
   {
