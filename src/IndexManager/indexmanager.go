@@ -22,9 +22,10 @@ type Position struct {
  */
 
 type IndexInfo struct {
-	table_name string
-	attr_name  string
-	attr_type  value.ValueType
+	Table_name  string
+	Attr_name   string
+	Attr_type   value.ValueType
+	Attr_length int
 }
 
 const index_file_suffix = ".index"
@@ -35,18 +36,8 @@ const index_file_suffix = ".index"
  * pos:
  */
 func Insert(info IndexInfo, key_value value.Value, pos Position) error {
-	filename := info.table_name + "_" + info.attr_name + index_file_suffix
+	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
 	cur, err := BufferManager.BlockRead(filename, 0)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	if cur[0] == 1 { // Is Leaf
-
-	} else { // Is not leaf
-
-	}
-
 	return nil
 }
 
@@ -73,12 +64,12 @@ func Free() {
 // record_length record 的长度，单位为 byte
 func Create(info IndexInfo, pos_in_record int, record_length int) error {
 	// Create file
-	filename := info.table_name + "_" + info.attr_name + index_file_suffix
+	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
 	if _, err := os.Create(filename); err != nil {
 		fmt.Println(err)
 		return err
 	}
-	err, buffer := BufferManager.BlockRead(filename, 0)
+	buffer, err := BufferManager.BlockRead(filename, 0)
 	if err != nil {
 		fmt.Println(err)
 		return err

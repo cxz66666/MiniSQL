@@ -2,7 +2,12 @@ package BufferManager
 
 const BlockSize = 4096
 
-func BlockRead(filename string, block_id int) (error, []byte) {
+func BlockRead(filename string, block_id int) ([]byte, error) {
+
+}
+
+// 返回的 block id 是指新的块在文件中的 block id
+func NewBlock(filename string) (block_id int, err error) {
 
 }
 
