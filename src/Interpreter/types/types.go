@@ -156,6 +156,7 @@ func (c DropTableStatement)GetOperationType() OperationType {
 
 // DropIndexStatement is a 'DROP INDEX' statement info.
 type DropIndexStatement struct {
+	TableName string
 	IndexName string
 }
 func (c DropIndexStatement)GetOperationType() OperationType {
@@ -185,6 +186,8 @@ type (
 		GetTargetCols()[]string
 		Debug()
 		GetTargetColsNum()int
+		//GetIndexExpr input a index column name, and find whether have a name same as index
+		GetIndexExpr(string) (bool,*ComparisonExprLSRV)
 	}
 	ComparisonExprLSRV struct {
 		Left string
@@ -236,7 +239,6 @@ type (
 )
 
 func (e *ComparisonExprLSRV)Evaluate(row []value.Value)(bool,error)  {
-
 	val := row[0]
 	if _,ok:=val.(value.Null);ok{ //left string's value is NULL
 		if _, iok := e.Right.(value.Null); iok {  //right is also NULL
@@ -268,7 +270,12 @@ func (e *ComparisonExprLSRV) GetTargetColsNum() int {
 func (e *ComparisonExprLSRV)Debug()  {
 	fmt.Println(e.Left,e.Operator,e.Right.String())
 }
-
+func (e *ComparisonExprLSRV)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
+	if e.Left==indexName{
+		return true,&ComparisonExprLSRV{Left: e.Left,Operator: e.Operator,Right: e.Right}
+	}
+	return false,nil
+}
 
 func (e *ComparisonExprLVRS)Evaluate(row []value.Value)(bool,error)  {
 	val := row[0]
@@ -302,7 +309,12 @@ func (e *ComparisonExprLVRS) GetTargetColsNum() int {
 func (e *ComparisonExprLVRS)Debug()  {
 	fmt.Println(e.Left.String(),e.Operator,e.Right)
 }
-
+func (e *ComparisonExprLVRS)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
+	if e.Right==indexName{
+		return true,&ComparisonExprLSRV{Left: e.Right,Operator: e.Operator,Right: e.Left}
+	}
+	return false,nil
+}
 
 
 func (e *ComparisonExprLVRV)Evaluate(row []value.Value)(bool,error)  {
@@ -317,7 +329,9 @@ func (e *ComparisonExprLVRV) GetTargetColsNum() int {
 func (e *ComparisonExprLVRV)Debug()  {
 	fmt.Println(e.Left.String(),e.Operator,e.Right.String())
 }
-
+func (e *ComparisonExprLVRV)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
+	return false,nil
+}
 
 func (e *ComparisonExprLSRS)Evaluate(row []value.Value)(bool,error)  {
 	vall := row[0]
@@ -352,7 +366,9 @@ func (e *ComparisonExprLSRS) GetTargetColsNum() int {
 func (e *ComparisonExprLSRS)Debug()  {
 	fmt.Println(e.Left,e.Operator,e.Right)
 }
-
+func (e *ComparisonExprLSRS)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
+	return false,nil
+}
 
 
 
@@ -384,6 +400,13 @@ func (e *AndExpr)Debug() {
 	fmt.Println(" and ")
 	e.Right.Debug()
 }
+func (e *AndExpr)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
+	b,c:=e.Left.GetIndexExpr(indexName)
+	if b==true {
+		return b,c
+	}
+	return e.Right.GetIndexExpr(indexName)
+}
 
 func (e *OrExpr) Evaluate(row []value.Value) (bool, error) {
 	leftOk, err := e.Left.Evaluate(row[0:e.LeftNum])
@@ -411,6 +434,14 @@ func (e *OrExpr)Debug() {
 	e.Right.Debug()
 
 }
+func (e *OrExpr)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
+	b,c:=e.Left.GetIndexExpr(indexName)
+	if b==true {
+		return b,c
+	}
+	return e.Right.GetIndexExpr(indexName)
+}
+
 func (e *NotExpr) Evaluate(row []value.Value) (bool, error) {
 	ok, err := e.Expr.Evaluate(row)
 	if err != nil {
@@ -428,7 +459,9 @@ func (e *NotExpr)Debug() {
 	e.Expr.Debug()
 	fmt.Println("not ")
 }
-
+func (e *NotExpr)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
+	return e.Expr.GetIndexExpr(indexName)
+}
 
 type InsertStament struct {
 	TableName     string

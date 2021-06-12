@@ -409,9 +409,10 @@ drop_table:
   }
 
 drop_index:
-    DROP INDEX index_name
+    DROP INDEX index_name ON table_name
   {
     s := types.DropIndexStatement{
+      TableName: $5,
       IndexName: $3,
     }
     yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)

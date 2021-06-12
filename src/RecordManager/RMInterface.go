@@ -31,17 +31,19 @@ func DropIndex(table *CatalogManager.TableCatalog,indexName string) error  {
 	return nil
 }
 //InsertRecord 传入cm中table的引用， columnPos传入插入哪些列，其值为column在table中的第几个   startBytePos 传入开始byte的集合，分别代表每个value代表的数据从哪个byte开始存（已经加上valid位和null位），values为value数组
-func InsertRecord(table *CatalogManager.TableCatalog,columnPos []int,startBytePos []int,values []value.Value,)  {
+func InsertRecord(table *CatalogManager.TableCatalog,columnPos []int,startBytePos []int,values []value.Value)  {
 	
 }
 
 //SelectRecord 传入select的表，需要返回的字段的名称，where表达式，这是没有索引的
+//如果column为空，就认为是选择所有
 func SelectRecord(table *CatalogManager.TableCatalogMap,columns []string, where *types.Where) (error,[]value.Value) {
 	//TODO
 	//where maybe nil!!!!
 	return nil,make([]value.Value,0)
 }
 //SelectRecordWithIndex  传入select的表，需要返回的字段的名称，where表达式, index为左 string 右 value 中间是判断符的struct， string保证存在索引
+//如果column为空，就认为是选择所有
 func SelectRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,where *types.Where,index types.ComparisonExprLSRV) (error,[]value.Value) {
 	//TODO
 	//where maybe nil!!!!
@@ -63,14 +65,14 @@ func DeleteRecordWithIndex(table *CatalogManager.TableCatalog,where *types.Where
 }
 
 //UpdateRecord 传入update的表，准备更新的column，value数组，where参数 无索引
-func UpdateRecord(table *CatalogManager.TableCatalog,columns []string,values []string,where *types.Where) (error,[]value.Value) {
+func UpdateRecord(table *CatalogManager.TableCatalog,columns []string,values []value.Value,where *types.Where) (error,[]value.Value) {
 	//TODO
 	//where maybe nil!!!!
 	return nil,make([]value.Value,0)
 }
 
 //UpdateRecordWithIndex 传入update的表，准备更新的column，value数组，where参数 index为左 string 右 value 中间是判断符的struct， string保证存在索引
-func UpdateRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,values []string,where *types.Where,index types.ComparisonExprLSRV) (error,[]value.Value) {
+func UpdateRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,values []value.Value,where *types.Where,index types.ComparisonExprLSRV) (error,[]value.Value) {
 	//TODO
 	//where maybe nil!!!!
 	return nil,make([]value.Value,0)

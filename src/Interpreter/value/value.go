@@ -5,6 +5,7 @@ package value
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 )
 //go:generate msgp
@@ -30,13 +31,13 @@ const (
 	NullType
 	AlienType
 )
+//Value is the most important type!
 type Value interface {
 	String()string
 	Compare(Value, CompareType)(bool,error)
 	SafeCompare(Value,CompareType)(bool,error)
 	Convert2Bytes() ([]byte,error)
-	Convert2IntType()(int)
-
+	Convert2IntType() ValueType
 }
 type Int struct {
 	Val int64
@@ -115,6 +116,8 @@ func (i Int)Convert2Bytes() ([]byte,error) {
 func (i Int)Convert2IntType() int {
 	return IntType
 }
+
+
 
 func (i Float) String() string {
 	return fmt.Sprint(i.Val)
@@ -362,6 +365,8 @@ func (i Null)Convert2Bytes() ([]byte,error) {
 func (i Null)Convert2IntType() int {
 	return NullType
 }
+
+// NewFromParquetValue you can input a arbitrary type into it, and it will try it's best to convert it to Value
 func NewFromParquetValue(v interface{}) Value {
 	switch v.(type) {
 	case int:
@@ -398,6 +403,74 @@ func NewFromParquetValue(v interface{}) Value {
 		return Alien{Val: v}
 	}
 }
-func CompareWithType(i Value,v Value,op CompareType) (bool,error) {
-	return i.(Int).Compare(v,op)
+
+//Byte2Value convert byte to Value ,length is used for char
+// IntType,FloatType,BoolType don't need a length, so you can use this function like Byte2Value([]bytes,IntType)
+// BytesType and NullType need a length to insure it's correct, so you must use this function like  Byte2Value([]bytes,BytesType,10)
+func Byte2Value(mybytes []byte,vt ValueType,length ...int) (Value,error)  {
+	switch vt {
+	case BoolType:
+		if len(mybytes)<1 {
+			return nil,errors.New("mybytes length is less than 1")
+		}
+		if mybytes[0]==1 {
+			return Bool{Val: true},nil
+		} else if mybytes[0]==0 {
+			return Bool{Val: false},nil
+		}
+		return nil,errors.New("this byte is not a bool byte")
+	case IntType:
+		if len(mybytes)<8 {
+			return nil,errors.New("mybytes length is less than 8")
+		}
+		var ret int64
+		buf:=bytes.NewBuffer(mybytes[0:8])
+		binary.Read(buf, binary.LittleEndian, &ret)
+		return Int{Val: ret},nil
+	case FloatType:
+		if len(mybytes)<8{
+			return nil,errors.New("mybytes length is less than 8")
+		}
+		var ret float64
+		buf:=bytes.NewBuffer(mybytes[0:8])
+		binary.Read(buf,binary.LittleEndian,&ret)
+		return Float{Val: ret},nil
+	case BytesType:
+		if len(length)<1 ||length[0]<=0{
+			return nil,errors.New("please input a length for bytes")
+		}
+		if len(mybytes)<length[0] {
+			return nil,errors.New("bytes don't have enough length to convert to bytes")
+		}
+		ret:=make([]byte,0,length[0]+1)
+		ret=append(ret,mybytes[0:length[0]]...)
+		return Bytes{Val: ret},nil
+	case NullType:
+		if len(length)<1 ||length[0]<=0{
+			return nil,errors.New("please input a length for bytes")
+		}
+		if len(mybytes)<length[0] {
+			return nil,errors.New("bytes don't have enough length to convert to bytes")
+		}
+		return Null{length:length[0]},nil
+	}
+	return nil,errors.New("The type is not supported.")
+}
+//
+func CompareWithType(i Value,v Value,op CompareType,vt ValueType) (bool,error) {
+	switch vt {
+	case BoolType:
+		return i.(Bool).Compare(v,op)
+	case IntType:
+		return i.(Int).Compare(v,op)
+	case FloatType:
+		return i.(Float).Compare(v,op)
+	case BytesType:
+		return i.(Bytes).Compare(v,op)
+	case NullType:
+		return i.(Null).Compare(v,op)
+	case AlienType:
+		return i.(Alien).Compare(v,op)
+	}
+	return false,errors.New("The type is not supported.")
 }

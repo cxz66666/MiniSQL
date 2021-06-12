@@ -10,6 +10,7 @@ import (
 var insertStatement=[]string{
 	"insert into cxz(column1,column2) values (123,'12');",
 	"insert into cxz  values (123,'123',234.234,'abcdefghighklf');",
+	"insert into cxz values (123,'123',234.234,'abcdefghighklf','fdsgdfgerdterwtfsdf');",
 }
 var deleteStatement=[]string{
 	"delete from cxz where column1=column1 and column2=324 and column3='234';",
@@ -17,7 +18,7 @@ var deleteStatement=[]string{
 	"delete from syf;",
 }
 var updateStatement=[]string{
-	"update cxz set column1="
+	"update cxz set column1=",
 }
 //please use TestCreateTable to create table before use TestInsertCheck
 func TestInsertCheck(t *testing.T) {

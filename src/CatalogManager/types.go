@@ -103,6 +103,12 @@ func CreateTableStatement2TableCatalog(a *types.CreateTableStatement) *TableCata
 	_=json.Unmarshal(aj,b)
 	return b
 }
+func CreateIndexStatement2IndexCatalog(a *types.CreateIndexStatement)*IndexCatalog  {
+	aj,_:=json.Marshal(&a)
+	b:=new(IndexCatalog)
+	_=json.Unmarshal(aj,b)
+	return b
+}
 
 func ColumnType2StringName(v ScalarColumnTypeTag) string {
 	switch v {
