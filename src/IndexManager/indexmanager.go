@@ -1,14 +1,16 @@
 package IndexManager
 
 import (
+	"fmt"
+	"minisql/src/BufferManager"
 	"minisql/src/Interpreter/value"
 	"os"
 )
 
 // 块中的位置
 type Position struct {
-	block  int
-	offset int
+	block  int16
+	offset int16
 }
 
 /*
@@ -17,15 +19,15 @@ type Position struct {
  * table_name:		表名
  * attr_name:		索引属性名
  * attr_type:		索引属性类型
- * pos_in_record:	索引在记录中的 offset（也就是记录开始的地址加上这个 offset 等于这个属性开始的地址
  */
 
 type IndexInfo struct {
-	table_name    string
-	attr_name     string
-	attr_type     value.ValueType
-	pos_in_record int
+	table_name string
+	attr_name  string
+	attr_type  value.ValueType
 }
+
+const index_file_suffix = ".index"
 
 /*
  * info:		用于确定是哪一个索引
@@ -33,6 +35,18 @@ type IndexInfo struct {
  * pos:
  */
 func Insert(info IndexInfo, key_value value.Value, pos Position) error {
+	filename := info.table_name + "_" + info.attr_name + index_file_suffix
+	cur, err := BufferManager.BlockRead(filename, 0)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	if cur[0] == 1 { // Is Leaf
+
+	} else { // Is not leaf
+
+	}
+
 	return nil
 }
 
@@ -55,11 +69,21 @@ func Free() {
 
 }
 
-func Create(info IndexInfo) error {
-	os.Open()
-	return nil
-}
-
-func externalMergeSort(info IndexInfo) error {
+// pos_in_record 索引字段在 record 中的 offset，单位为 byte
+// record_length record 的长度，单位为 byte
+func Create(info IndexInfo, pos_in_record int, record_length int) error {
+	// Create file
+	filename := info.table_name + "_" + info.attr_name + index_file_suffix
+	if _, err := os.Create(filename); err != nil {
+		fmt.Println(err)
+		return err
+	}
+	err, buffer := BufferManager.BlockRead(filename, 0)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	buffer[0] = 1 //  IsLeaf[root] = true
+	buffer[2] = 0 //  n[root] = 0
 	return nil
 }
