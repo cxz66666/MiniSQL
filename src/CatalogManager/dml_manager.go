@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"minisql/src/Interpreter/types"
+	"minisql/src/Interpreter/value"
 )
 //TODO NULL CHECK, if a value is null, now we can't check it!
 func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
@@ -72,33 +73,36 @@ func DeleteCheck(statement types.DeleteStatement) (error,*types.ComparisonExprLS
 	}
 	return nil,exprLSRV
 }
-func UpdateCheck(statement types.UpdateStament)  (error,*types.ComparisonExprLSRV)  {
+func UpdateCheck(statement types.UpdateStament)  (error,[]string,[]value.Value, *types.ComparisonExprLSRV)  {
 	var table *TableCatalog
 	var  ok bool
 	var err error
 	if len(UsingDatabase.DatabaseId)==0 {
-		return errors.New("no using database， please use 'use database' before Insert"),nil
+		return errors.New("no using database， please use 'use database' before Insert"),nil,nil,nil
 	}
 	if table,ok=TableName2CatalogMap[statement.TableName];!ok { //
-		return errors.New("don't have a table named "+statement.TableName+" ,please use create to build it"),nil
+		return errors.New("don't have a table named "+statement.TableName+" ,please use create to build it"),nil,nil,nil
 	}
 	err,exprLSRV:=whereOptCheck(statement.Where,table)
 	if err!=nil {
-		return err,nil
+		return err,nil,nil,nil
 	}
 
 	// SetExpr check!!!
-
+	setColumns:=make([]string,0)
+	values:=make([]value.Value,0)
 	var column Column
 	for _,item:=range statement.SetExpr {
 		if column,ok=table.ColumnsMap[item.Left];!ok {
-			return errors.New("don't have a column named "+item.Left),nil
+			return errors.New("don't have a column named "+item.Left),nil,nil,nil
 		}
 		if item.Right.Convert2IntType()!=column.Type.TypeTag {
-			return errors.New(fmt.Sprintf("column %s need a type %d, but your input value is %s",column.Name,column.Type.TypeTag,item.Right.String())),nil
+			return errors.New(fmt.Sprintf("column %s need a type %d, but your input value is %s",column.Name,column.Type.TypeTag,item.Right.String())),nil,nil,nil
 		}
+		setColumns=append(setColumns,item.Left)
+		values=append(values,item.Right)
 	}
-	return nil,exprLSRV
+	return nil,setColumns,values, exprLSRV
 }
 
 func SelectCheck(statement types.SelectStatement) (error,*types.ComparisonExprLSRV)  {

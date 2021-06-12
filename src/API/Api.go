@@ -1,9 +1,12 @@
 package API
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"minisql/src/CatalogManager"
 	"minisql/src/Interpreter/types"
+	"minisql/src/Interpreter/value"
 	"minisql/src/RecordManager"
 )
 
@@ -87,17 +90,63 @@ func InsertAPI(statement types.InsertStament) error  {
 	if err!=nil{
 		return err
 	}
-
+	err=RecordManager.InsertRecord(CatalogManager.GetTableCatalogUnsafe(statement.TableName),colPos,startBytePos,statement.Values)
+	return err
 }
 
 func UpdateAPI(statement types.UpdateStament) error  {
+	err,setColumns,values, exprLSRV:=CatalogManager.UpdateCheck(statement)
+	if err!=nil{
+		return err
+	}
+	var rowNum int
+	if exprLSRV==nil{
+		err,rowNum=RecordManager.UpdateRecord(CatalogManager.GetTableCatalogUnsafe(statement.TableName),setColumns,values,statement.Where)
+	} else {
+		err,rowNum=RecordManager.UpdateRecordWithIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableName),setColumns,values,statement.Where,*exprLSRV)
+	}
+	if err!=nil {
+		return err
+	}
+	fmt.Println(rowNum)
 	return nil
 }
 
 func DeleteAPI(statement types.DeleteStatement) error {
-	return nil
+	err,exprLSRV:=CatalogManager.DeleteCheck(statement)
+	if err!=nil	{
+		return err
+	}
+	var rowNum int
+	if exprLSRV==nil{
+		err,rowNum=RecordManager.DeleteRecord(CatalogManager.GetTableCatalogUnsafe(statement.TableName),statement.Where)
+	} else {
+		err,rowNum=RecordManager.DeleteRecordWithIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableName),statement.Where,*exprLSRV)
+	}
+	fmt.Println(rowNum)
+	return  nil
 }
 
 func SelectAPI(statement types.SelectStatement) error  {
+	err,exprLSRV:=CatalogManager.SelectCheck(statement)
+	if err!=nil {
+		return err
+	}
+	var rowNum []value.Row
+	if exprLSRV==nil{
+		err,rowNum=RecordManager.SelectRecord(CatalogManager.GetTableCatalogUnsafe(statement.TableNames[0]),statement.Fields.ColumnNames,statement.Where)
+	} else {
+		err,rowNum=RecordManager.SelectRecordWithIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableNames[0]),statement.Fields.ColumnNames,statement.Where,*exprLSRV)
+	}
+	if err!=nil {
+		return err
+	}
+	for _,item:=range rowNum{
+		b:=bytes.NewBuffer([]byte{})
+		for _,v:=range item.Values {
+			b.WriteString(v.String())
+		}
+		fmt.Println(b.String())
+	}
 	return nil
 }
