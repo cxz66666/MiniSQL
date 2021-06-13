@@ -44,6 +44,8 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 	filename := info.getFileName()
 	key_length := info.Attr_length
 
+	handleRootFull(info)
+
 	var cur_node bpNode
 	cur_node_block, _ := BufferManager.BlockRead(filename, 0)
 	cur_node = bpNode{
@@ -67,6 +69,8 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 			data:       next_node_block.Data,
 		}
 		if next_node.getSize() == getOrder(key_length) { // If it is full
+			next_node_block.FinishRead()
+			cur_node_block.SetDirty()
 			cur_node.splitNode(info, i)
 			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.LessEqual); res {
 				i++
@@ -79,13 +83,17 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 			}
 		}
 		if cur_node.isLeaf() == 1 {
+			cur_node_block.SetDirty()
 			ith_pointer_pos := cur_node.getPointerPosition(i)
 			copy(cur_node.data[ith_pointer_pos+4+key_length:], cur_node.data[ith_pointer_pos:])
 			cur_node.setFilePointer(i, pos)
 			break
 		}
+		cur_node_block.FinishRead()
 		cur_node = next_node
+		cur_node_block = next_node_block
 	}
+	cur_node_block.FinishRead()
 	return nil
 }
 
@@ -116,14 +124,18 @@ func Delete(info IndexInfo, key_value value.Value, pos Position) error {
 			data:       next_node_block.Data,
 		}
 		if next_node.getSize() == (getOrder(key_length)-1)/2 { // If it is in danger of lack of node
-			// Save the day!
+			next_node_block.FinishRead()
+			cur_node_block.SetDirty()
+			cur_node.saveNode(info, i)
 		}
 		if cur_node.isLeaf() == 1 {
 			ith_pointer_pos := cur_node.getPointerPosition(i)
 			copy(cur_node.data[ith_pointer_pos:], cur_node.data[ith_pointer_pos+4+key_length:])
 			break
 		}
+		cur_node_block.FinishRead()
 		cur_node = next_node
+		cur_node_block = next_node_block
 	}
 	return nil
 }

@@ -7,6 +7,15 @@ import (
 	"minisql/src/Interpreter/value"
 )
 
+func getBpNode(filename string, block_id uint16, key_length uint16) (node bpNode, block *BufferManager.Block) {
+	block, _ = BufferManager.BlockRead(filename, block_id)
+	node = bpNode{
+		key_length: key_length,
+		data:       block.Data,
+	}
+	return
+}
+
 // Get the order of this B+ tree
 // Order is supposed to be the maximum *odd* number that
 // the block is capable of storing that many keys
@@ -179,6 +188,51 @@ func (info *IndexInfo) getFileName() string {
 	return info.Table_name + "_" + info.Attr_name + index_file_suffix
 }
 
+// Copy key[src_id] from src into key[des_id] of des
+func copyKey(des bpNode, des_id uint16, src bpNode, src_id uint16) {
+	key_length := des.key_length
+	src_key_pos := src.getKeyPosition(src_id)
+	des_key_pos := des.getKeyPosition(des_id)
+	copy(des.data[des_key_pos:des_key_pos+key_length-1], src.data[src_key_pos:src_key_pos+key_length-1])
+}
+
+// Copy P[src_id] from src into P[des_id] of des
+func copyPointer(des bpNode, des_id uint16, src bpNode, src_id uint16) {
+	var pointer_length uint16
+	if des.isLeaf() == 1 {
+		pointer_length = 4
+	} else {
+		pointer_length = 2
+	}
+	src_pointer_pos := src.getPointerPosition(src_id)
+	des_pointer_pos := des.getPointerPosition(des_id)
+	copy(des.data[des_pointer_pos:des_pointer_pos+pointer_length-1], src.data[src_pointer_pos:src_pointer_pos+pointer_length-1])
+}
+
+// Make space for {pointer, key} at position k
+func (node bpNode) makeSpace(k uint16) {
+	kth_pointer_pos := node.getPointerPosition(k)
+	var subnode_length uint16
+	if node.isLeaf() == 1 {
+		subnode_length = 4 + node.key_length
+	} else {
+		subnode_length = 2 + node.key_length
+	}
+	copy(node.data[kth_pointer_pos+subnode_length:], node.data[kth_pointer_pos:])
+}
+
+// Shrink space at position k
+func (node bpNode) shrinkSpace(k uint16) {
+	kth_pointer_pos := node.getPointerPosition(k)
+	var subnode_length uint16
+	if node.isLeaf() == 1 {
+		subnode_length = 4 + node.key_length
+	} else {
+		subnode_length = 2 + node.key_length
+	}
+	copy(node.data[kth_pointer_pos:], node.data[kth_pointer_pos+subnode_length:])
+}
+
 // Split a node into half when it is full
 // parent: the parent node
 // k: the kth node of the parent is full
@@ -192,29 +246,15 @@ func (parent bpNode) splitNode(info IndexInfo, k uint16) {
 	evil_node_id := parent.getPointer(k)
 
 	// Get the new node and the evil node
-	var new_node, evil_node bpNode
-
-	new_node_block, _ := BufferManager.BlockRead(filename, new_node_id)
-	new_node = bpNode{
-		key_length: key_length,
-		data:       new_node_block.Data,
-	}
+	new_node, new_node_block := getBpNode(filename, new_node_id, key_length)
 	new_node_block.SetDirty()
-	defer func() {
-		new_node_block.FinishRead()
-	}()
+	defer new_node_block.FinishRead()
 
-	evil_node_block, _ := BufferManager.BlockRead(filename, evil_node_id)
-	evil_node = bpNode{
-		key_length: key_length,
-		data:       evil_node_block.Data,
-	}
+	evil_node, evil_node_block := getBpNode(filename, evil_node_id, key_length)
 	evil_node_block.SetDirty()
-	defer func() {
-		evil_node_block.FinishRead()
-	}()
+	defer evil_node_block.FinishRead()
 
-	M := getOrder(info.Attr_length) // The order of the tree
+	M := getOrder(key_length) // The order of the tree
 
 	new_node.setSize((M - 1) / 2)
 	new_node.setLeaf(evil_node.isLeaf())
@@ -254,25 +294,13 @@ func (parent bpNode) mergeNode(info IndexInfo, k uint16) {
 
 	var evil_node, evil_sib bpNode
 
-	evil_node_block, _ := BufferManager.BlockRead(filename, evil_node_id)
-	evil_node = bpNode{
-		key_length: key_length,
-		data:       evil_node_block.Data,
-	}
+	evil_node, evil_node_block := getBpNode(filename, evil_node_id, key_length)
 	evil_node_block.SetDirty()
-	defer func() {
-		evil_node_block.FinishRead()
-	}()
+	defer evil_node_block.FinishRead()
 
-	evil_sib_block, _ := BufferManager.BlockRead(filename, evil_sib_id)
-	evil_sib = bpNode{
-		key_length: key_length,
-		data:       evil_sib_block.Data,
-	}
+	evil_node, evil_sib_block := getBpNode(filename, evil_sib_id, key_length)
 	evil_sib_block.SetDirty()
-	defer func() {
-		evil_sib_block.FinishRead()
-	}()
+	defer evil_sib_block.FinishRead()
 
 	evil_node.setSize(evil_node.getSize() + evil_sib.getSize())
 
@@ -298,47 +326,83 @@ func (parent bpNode) moveNode(info IndexInfo, k uint16) {
 	poor_node_id := parent.getPointer(k)
 	rich_node_id := parent.getPointer(k + 1)
 
-	var poor_node, rich_node bpNode
-
-	poor_node_block, _ := BufferManager.BlockRead(filename, poor_node_id)
-	poor_node = bpNode{
-		key_length: key_length,
-		data:       poor_node_block.Data,
-	}
+	poor_node, poor_node_block := getBpNode(filename, poor_node_id, key_length)
 	poor_node_block.SetDirty()
-	defer func() {
-		poor_node_block.FinishRead()
-	}()
+	defer poor_node_block.FinishRead()
 
-	rich_node_block, _ := BufferManager.BlockRead(filename, rich_node_id)
-	rich_node = bpNode{
-		key_length: key_length,
-		data:       rich_node_block.Data,
-	}
+	rich_node, rich_node_block := getBpNode(filename, rich_node_id, key_length)
 	rich_node_block.SetDirty()
-	defer func() {
-		rich_node_block.FinishRead()
-	}()
+	defer rich_node_block.FinishRead()
 
+	var new_key_id, new_pointer_id uint16
 	n := poor_node.getSize()
-	kth_key_pos := parent.getKeyPosition(k)
-	src_key_pos := rich_node.getKeyPosition(0)
-	src_pointer_pos := rich_node.getPointerPosition(0)
-	var des_pointer_pos, des_key_pos, pointer_length uint16
 	if poor_node.isLeaf() == 1 {
-		des_key_pos = poor_node.getKeyPosition(n + 1)
-		des_pointer_pos = poor_node.getPointerPosition(n + 1)
-		pointer_length = 4
+		new_key_id = n + 1
 	} else {
-		des_key_pos = poor_node.getKeyPosition(n)
-		des_pointer_pos = poor_node.getPointerPosition(n + 1)
-		pointer_length = 2
+		new_key_id = n
 	}
-	copy(poor_node.data[des_key_pos:des_key_pos+key_length-1], parent.data[kth_key_pos:kth_key_pos+key_length-1])
-	copy(parent.data[kth_key_pos:kth_key_pos+key_length-1], rich_node.data[src_key_pos:src_key_pos+key_length-1])
-	copy(poor_node.data[des_pointer_pos:des_pointer_pos+pointer_length-1], rich_node.data[src_pointer_pos:src_pointer_pos+pointer_length-1])
-	copy(rich_node.data[src_pointer_pos:], rich_node.data[src_pointer_pos+key_length+pointer_length:])
+	new_pointer_id = n + 1
+	copyKey(poor_node, new_key_id, parent, k)
+	copyKey(parent, k, rich_node, 0)
+	copyPointer(poor_node, new_pointer_id, rich_node, 0)
+	rich_node.shrinkSpace(0)
 
 	rich_node.setSize(rich_node.getSize() - 1)
 	poor_node.setSize(poor_node.getSize() + 1)
+}
+
+// Move the last node of kth child into (k+1)th child
+func (parent bpNode) forwardNode(info IndexInfo, k uint16) {
+	filename := info.getFileName()
+	key_length := info.Attr_length
+
+	poor_node_id := parent.getPointer(k + 1)
+	rich_node_id := parent.getPointer(k)
+
+	var poor_node, rich_node bpNode
+
+	poor_node, poor_node_block := getBpNode(filename, poor_node_id, key_length)
+	poor_node_block.SetDirty()
+	defer poor_node_block.FinishRead()
+
+	rich_node, rich_node_block := getBpNode(filename, rich_node_id, key_length)
+	rich_node_block.SetDirty()
+	defer rich_node_block.FinishRead()
+
+	n := rich_node.getSize()
+
+	poor_node.makeSpace(0)
+	copyKey(poor_node, 0, parent, k)
+	copyPointer(poor_node, 0, rich_node, n)
+	copyKey(parent, k, rich_node, n)
+
+	rich_node.setSize(rich_node.getSize() - 1)
+	poor_node.setSize(poor_node.getSize() + 1)
+}
+
+func (parent bpNode) saveNode(info IndexInfo, k uint16) {
+	filename := info.getFileName()
+	key_length := parent.key_length
+	if k == parent.getSize() { // if this is the last node
+		prev_node, _ := getBpNode(filename, parent.getPointer(k-1), key_length)
+		if prev_node.getSize() > (getOrder(key_length)-1)/2 {
+			parent.forwardNode(info, k-1)
+		} else {
+			parent.mergeNode(info, k-1)
+		}
+	} else if k > 0 {
+		next_node, _ := getBpNode(filename, parent.getPointer(k+1), key_length)
+		if next_node.getSize() > (getOrder(key_length)-1)/2 {
+			parent.moveNode(info, k)
+		} else {
+			parent.mergeNode(info, k)
+		}
+	} else {
+		panic("WTF, a node with one child is being saved")
+	}
+}
+
+func handleRootFull(info IndexInfo) {
+	filename := info.getFileName()
+	key_length := info.Attr_length
 }
