@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+type bpNode []byte
+
 // 块中的位置
 type Position struct {
 	block  int16
@@ -25,7 +27,7 @@ type IndexInfo struct {
 	Table_name  string
 	Attr_name   string
 	Attr_type   value.ValueType
-	Attr_length int
+	Attr_length uint16
 }
 
 const index_file_suffix = ".index"
@@ -36,12 +38,70 @@ const index_file_suffix = ".index"
  * pos:
  */
 func Insert(info IndexInfo, key_value value.Value, pos Position) error {
-	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
-	cur, err := BufferManager.BlockRead(filename, 0)
+	filename := info.getFileName()
+	key_length := info.Attr_length
+
+	var cur_node bpNode
+	cur_node, _ = BufferManager.BlockRead(filename, 0)
+
+	for {
+		n := cur_node.getSize()
+		var i uint16 = 0
+		for ; i < n; i++ {
+			if res, _ := key_value.Compare(cur_node.getKey(key_length, info.Attr_type, i), value.LessEqual); res == false {
+				break
+			}
+		}
+		next_node_id := cur_node.getPointer(key_length, i)
+		var next_node bpNode
+		next_node, _ = BufferManager.BlockRead(filename, next_node_id)
+		if next_node.getSize() == getOrder(key_length) { // If it is full
+			cur_node.splitNode(info, i)
+			if res, _ := key_value.Compare(cur_node.getKey(key_length, info.Attr_type, i), value.LessEqual); res == true {
+				i++
+				next_node_id = cur_node.getPointer(key_length, i)
+				next_node, _ = BufferManager.BlockRead(filename, next_node_id)
+			}
+		}
+		if cur_node.isLeaf() == 1 {
+			ith_pointer_pos := cur_node.getPointerPosition(key_length, i)
+			copy(cur_node[ith_pointer_pos+4+key_length:], cur_node[ith_pointer_pos:])
+			cur_node.setFilePointer(key_length, i, pos)
+			break
+		}
+		cur_node = next_node
+	}
 	return nil
 }
 
 func Delete(info IndexInfo, key_value value.Value, pos Position) error {
+	filename := info.getFileName()
+	key_length := info.Attr_length
+
+	var cur_node bpNode
+	cur_node, _ = BufferManager.BlockRead(filename, 0)
+
+	for {
+		n := cur_node.getSize()
+		var i uint16 = 0
+		for ; i < n; i++ {
+			if res, _ := key_value.Compare(cur_node.getKey(key_length, info.Attr_type, i), value.LessEqual); res == false {
+				break
+			}
+		}
+		next_node_id := cur_node.getPointer(key_length, i)
+		var next_node bpNode
+		next_node, _ = BufferManager.BlockRead(filename, next_node_id)
+		if next_node.getSize() == (getOrder(key_length)-1)/2 { // If it is in danger of lack of node
+			// Save the day!
+		}
+		if cur_node.isLeaf() == 1 {
+			ith_pointer_pos := cur_node.getPointerPosition(key_length, i)
+			copy(cur_node[ith_pointer_pos:], cur_node[ith_pointer_pos+4+key_length:])
+			break
+		}
+		cur_node = next_node
+	}
 	return nil
 }
 
