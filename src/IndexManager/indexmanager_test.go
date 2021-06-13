@@ -14,12 +14,22 @@ var info IndexInfo = IndexInfo{
 	Attr_length: 10,
 }
 
+func initTest() {
+	os.Create("../BufferManager/student_name.index")
+}
+
 func TestSplit(t *testing.T) {
+	BufferManager.InitBuffer()
 	filename := info.getFileName()
+	BufferManager.NewBlock(filename)
+	BufferManager.NewBlock(filename)
+	BufferManager.NewBlock(filename)
+	BufferManager.NewBlock(filename)
+	BufferManager.BlockFlushAll()
 	node_id, _ := BufferManager.NewBlock(filename)
 	node, _ := getBpNode(filename, node_id, info.Attr_length)
 	node.nodeInit()
-	node.print()
+	// node.print()
 }
 
 func TestInsert(t *testing.T) {

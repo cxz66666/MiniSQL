@@ -2,7 +2,6 @@ package IndexManager
 
 import (
 	"fmt"
-	"minisql/src/BufferManager"
 	"minisql/src/Interpreter/value"
 	"os"
 )
@@ -47,52 +46,41 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 	handleRootFull(info)
 
 	var cur_node bpNode
-	cur_node_block, _ := BufferManager.BlockRead(filename, 0)
-	cur_node = bpNode{
-		key_length: key_length,
-		data:       cur_node_block.Data,
-	}
+	cur_node, cur_node_block := getBpNode(filename, 0, key_length)
 
-	for {
+	M := getOrder(key_length)
+
+	for cur_node.isLeaf() == 0 {
 		n := cur_node.getSize()
-		var i uint16 = 0
-		for ; i < n; i++ {
-			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.LessEqual); !res {
+		var i uint16
+		for i = 0; i < n; i++ {
+			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.Great); res {
 				break
 			}
 		}
 		next_node_id := cur_node.getPointer(i)
-		var next_node bpNode
-		next_node_block, _ := BufferManager.BlockRead(filename, next_node_id)
-		next_node = bpNode{
-			key_length: key_length,
-			data:       next_node_block.Data,
-		}
-		if next_node.getSize() == getOrder(key_length) { // If it is full
+		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
+		if next_node.getSize() == M { // If it is full
 			next_node_block.FinishRead()
 			cur_node_block.SetDirty()
 			cur_node.splitNode(info, i)
-			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.LessEqual); res {
-				i++
-				next_node_id = cur_node.getPointer(i)
-				next_node_block, _ = BufferManager.BlockRead(filename, next_node_id)
-				next_node = bpNode{
-					key_length: key_length,
-					data:       next_node_block.Data,
-				}
-			}
+		} else {
+			cur_node_block.FinishRead()
+			cur_node = next_node
+			cur_node_block = next_node_block
 		}
-		if cur_node.isLeaf() == 1 {
-			cur_node_block.SetDirty()
-			ith_pointer_pos := cur_node.getPointerPosition(i)
-			copy(cur_node.data[ith_pointer_pos+4+key_length:], cur_node.data[ith_pointer_pos:])
-			cur_node.setFilePointer(i, pos)
+	}
+	n := cur_node.getSize()
+	var i uint16
+	for i = 0; i <= n; i++ {
+		if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.Great); res {
 			break
 		}
-		cur_node_block.FinishRead()
-		cur_node = next_node
-		cur_node_block = next_node_block
 	}
+	cur_node_block.SetDirty()
+	cur_node.makeSpace(i)
+	cur_node.setFilePointer(i, pos)
+	cur_node.setKey(i, info.Attr_type, key_value)
 	cur_node_block.FinishRead()
 	return nil
 }
@@ -101,42 +89,42 @@ func Delete(info IndexInfo, key_value value.Value, pos Position) error {
 	filename := info.getFileName()
 	key_length := info.Attr_length
 
-	var cur_node bpNode
-	cur_node_block, _ := BufferManager.BlockRead(filename, 0)
-	cur_node = bpNode{
-		key_length: key_length,
-		data:       cur_node_block.Data,
-	}
+	cur_node, cur_node_block := getBpNode(filename, 0, key_length)
 
-	for {
+	M := getOrder(key_length)
+
+	for cur_node.isLeaf() == 0 {
 		n := cur_node.getSize()
 		var i uint16 = 0
 		for ; i < n; i++ {
-			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.LessEqual); !res {
+			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.Great); res {
 				break
 			}
 		}
 		next_node_id := cur_node.getPointer(i)
-		var next_node bpNode
-		next_node_block, _ := BufferManager.BlockRead(filename, next_node_id)
-		next_node = bpNode{
-			key_length: key_length,
-			data:       next_node_block.Data,
-		}
-		if next_node.getSize() == (getOrder(key_length)-1)/2 { // If it is in danger of lack of node
+		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
+		if next_node.getSize() == (M-1)/2 { // If it is in danger of lack of node
 			next_node_block.FinishRead()
 			cur_node_block.SetDirty()
 			cur_node.saveNode(info, i)
+		} else {
+			cur_node_block.FinishRead()
+			cur_node = next_node
+			cur_node_block = next_node_block
 		}
-		if cur_node.isLeaf() == 1 {
-			ith_pointer_pos := cur_node.getPointerPosition(i)
-			copy(cur_node.data[ith_pointer_pos:], cur_node.data[ith_pointer_pos+4+key_length:])
+	}
+	// Search in the leaf
+	n := cur_node.getSize()
+	var i uint16
+	for i = 0; i <= n; i++ {
+		if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.Equal); res {
 			break
 		}
-		cur_node_block.FinishRead()
-		cur_node = next_node
-		cur_node_block = next_node_block
 	}
+	if i <= n {
+		cur_node.shrinkSpace(i)
+	}
+	cur_node_block.FinishRead()
 	handleRootSingle(info)
 	return nil
 }
