@@ -405,4 +405,36 @@ func (parent bpNode) saveNode(info IndexInfo, k uint16) {
 func handleRootFull(info IndexInfo) {
 	filename := info.getFileName()
 	key_length := info.Attr_length
+
+	root, root_block := getBpNode(filename, 0, key_length)
+	defer root_block.FinishRead()
+
+	if root.getSize() == getOrder(key_length) {
+		// If root is full, make it a child of the new node
+		root_block.SetDirty()
+		new_block_id, _ := BufferManager.NewBlock(filename)
+		new_node, new_node_block := getBpNode(filename, new_block_id, key_length)
+		new_node_block.SetDirty()
+
+		copy(new_node.data, root.data)
+		root.setSize(0)
+		root.setPointer(0, new_block_id)
+
+		new_node_block.FinishRead()
+	}
+}
+
+func handleRootSingle(info IndexInfo) {
+	// If root is single, simply copy all the info from the only child into node
+	filename := info.getFileName()
+	key_length := info.Attr_length
+
+	root, root_block := getBpNode(filename, 0, key_length)
+	defer root_block.FinishRead()
+	if root.isLeaf() == 0 && root.getSize() == 1 { // Single root
+		root_block.SetDirty()
+		child, child_block := getBpNode(filename, root.getPointer(0), key_length)
+		copy(root.data, child.data)
+		child_block.FinishRead()
+	}
 }

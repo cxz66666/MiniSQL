@@ -137,6 +137,7 @@ func Delete(info IndexInfo, key_value value.Value, pos Position) error {
 		cur_node = next_node
 		cur_node_block = next_node_block
 	}
+	handleRootSingle(info)
 	return nil
 }
 

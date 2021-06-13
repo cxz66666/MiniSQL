@@ -5,11 +5,13 @@ import (
 	"testing"
 )
 
-func TestCreateFile(t *testing.T) {
-	index_info := IndexInfo{
-		table_name: "student",
-		attr_name:  "name",
-		attr_type:  value.StringType,
-	}
-	Create(index_info, 10, 10)
+const info = IndexInfo{
+	Table_name:  "StudentInfo",
+	Attr_name:   "name",
+	Attr_type:   value.StringType,
+	Attr_length: 10,
+}
+
+func TestIsLeaf(t *testing.T) {
+
 }
