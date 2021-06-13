@@ -3,9 +3,25 @@ package IndexManager
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"minisql/src/BufferManager"
 	"minisql/src/Interpreter/value"
 )
+
+func (node bpNode) print() {
+	fmt.Println("Key length: " + fmt.Sprint(node.key_length) + "\n")
+	fmt.Println("Is leaf: " + fmt.Sprint(node.isLeaf()) + "\n")
+	fmt.Println("Size: " + fmt.Sprint(node.getSize()) + "\n")
+	n := node.getSize()
+	for i := uint16(0); i <= n; i++ {
+		fmt.Println("" + fmt.Sprint(node.getPointer(i)))
+	}
+}
+
+func (node bpNode) nodeInit() {
+	node.setSize(0)
+	node.setLeaf(0)
+}
 
 func getBpNode(filename string, block_id uint16, key_length uint16) (node bpNode, block *BufferManager.Block) {
 	block, _ = BufferManager.BlockRead(filename, block_id)
@@ -46,9 +62,8 @@ func (node bpNode) getSize() (size uint16) {
 
 // Set the size of the node
 func (node bpNode) setSize(size uint16) {
-	buf := bytes.NewBuffer([]byte{})
+	buf := bytes.NewBuffer(node.data[1:2])
 	binary.Write(buf, binary.LittleEndian, size)
-	copy(node.data[1:2], buf.Bytes())
 }
 
 // Get the start of the P[k]
@@ -248,6 +263,7 @@ func (parent bpNode) splitNode(info IndexInfo, k uint16) {
 	// Get the new node and the evil node
 	new_node, new_node_block := getBpNode(filename, new_node_id, key_length)
 	new_node_block.SetDirty()
+	new_node.nodeInit()
 	defer new_node_block.FinishRead()
 
 	evil_node, evil_node_block := getBpNode(filename, evil_node_id, key_length)
@@ -415,6 +431,7 @@ func handleRootFull(info IndexInfo) {
 		new_block_id, _ := BufferManager.NewBlock(filename)
 		new_node, new_node_block := getBpNode(filename, new_block_id, key_length)
 		new_node_block.SetDirty()
+		new_node.nodeInit()
 
 		copy(new_node.data, root.data)
 		root.setSize(0)
