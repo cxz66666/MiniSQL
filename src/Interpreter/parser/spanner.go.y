@@ -140,6 +140,7 @@ create_table:
       item.ColumnPos=index
       tmpmap[item.Name]=item
     }
+
     s := types.CreateTableStatement{
       TableName:   $3,
       ColumnsMap:  tmpmap   ,

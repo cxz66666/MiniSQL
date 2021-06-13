@@ -52,12 +52,22 @@ func DropDatabaseAPI(statement types.DropDatabaseStatement) error  {
 
 
 func CreateTableAPI(statement types.CreateTableStatement) error {
-	err:= CatalogManager.CreateTableCheck(statement)
+	err,indexs:= CatalogManager.CreateTableCheck(statement)
 	if err!=nil {
 		return err
 	}
-	return RecordManager.CreateTable(statement.TableName)
+	err=RecordManager.CreateTable(statement.TableName)
+	if err!=nil{
+		return err
+	}
+	for _,item:=range indexs{
+		err=RecordManager.CreateIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableName),item)
+		if err!=nil{
+			return err
+		}
+	}
 }
+
 
 func CreateIndexAPI(statement types.CreateIndexStatement) error  {
 	err,indexCatalog:=CatalogManager.CreateIndexCheck(statement)

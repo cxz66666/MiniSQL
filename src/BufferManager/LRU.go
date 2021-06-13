@@ -92,7 +92,6 @@ func (cache *LRUCache) PutBlock(value *Block, index int) {
 		}
 
 	}
-
 	cache.root.appendToBack(value)
 
 	//fmt.Println(index)

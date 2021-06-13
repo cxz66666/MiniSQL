@@ -5,17 +5,17 @@ import (
 	"minisql/src/Interpreter/types"
 )
 const prefix_primarykey="primary_key"
-func createTableInitAndCheck(statement *TableCatalog) error  {
+func createTableInitAndCheck(statement *TableCatalog) (error,[]IndexCatalog) {
 	recordlength:=0
 	columnNum:=0
 	bytesPos:=make([]int,len(statement.ColumnsMap)+1)
 
 	for _,item:=range statement.ColumnsMap{ //check the type and length
 		if item.Type.TypeTag>Timestamp || item.Type.TypeTag<Bool {
-			return errors.New("column "+item.Name+" has a illegal type")
+			return errors.New("column "+item.Name+" has a illegal type"),nil
 		}
 		if item.Type.TypeTag==Bytes &&item.Type.Length>255 {
-			return errors.New("column "+item.Name+" has a length > 255, please set the length between 0~255")
+			return errors.New("column "+item.Name+" has a length > 255, please set the length between 0~255"),nil
 		}
 		switch item.Type.TypeTag {
 		case Bool:
@@ -79,30 +79,56 @@ func createTableInitAndCheck(statement *TableCatalog) error  {
 	//}
 	//statement.Indexs= append(statement.Indexs,newIndex )
 	statement.RecordLength=recordlength
-	return nil
+	if len(statement.PrimaryKeys) > 0 {
+		keyname:=statement.PrimaryKeys[0].Name
+		if item,ok:=statement.ColumnsMap[keyname];!ok{
+			return errors.New("primary key error, don't have a column name "+item.Name),nil
+		} else {
+			item.Unique=true
+			item.NotNull=true
+			statement.ColumnsMap[keyname]=item
+		}
+	}
+
+	indexs:=make([]IndexCatalog,0)
+	for _,item:=range statement.ColumnsMap{
+		if item.Unique{
+			indexs=append(indexs,IndexCatalog{
+				IndexName: item.Name+"_index",
+				Unique: true,
+				Keys: []Key{
+					{
+						Name: item.Name,
+						KeyOrder: Asc,
+					},
+				},
+			})
+		}
+	}
+	return nil,indexs
 }
 
-func CreateTableCheck(statement types.CreateTableStatement) error  {
+func CreateTableCheck(statement types.CreateTableStatement) (error,[]IndexCatalog)  {
 	if len(UsingDatabase.DatabaseId) ==0 {
-		return errors.New("Don't use database, please create table after using database")
+		return errors.New("Don't use database, please create table after using database"),nil
 	}
 	if _,ok:=TableName2CatalogMap[statement.TableName];ok {
-		return errors.New("Table "+statement.TableName+" already exists")
+		return errors.New("Table "+statement.TableName+" already exists"),nil
 	}
 	newCatalog:=CreateTableStatement2TableCatalog(&statement)
-	err:=createTableInitAndCheck(newCatalog)
+	err,indexs:=createTableInitAndCheck(newCatalog)
 	if err != nil{
-		return err
+		return err,nil
 	}
 	if newCatalog!=nil {
 		TableName2CatalogMap[statement.TableName]=newCatalog
 
 	} else {
-		return errors.New("fail to conver type, internal errors")
+		return errors.New("fail to conver type, internal errors"),nil
 	}
 
 	//_= AddTableToCatalog(UsingDatabase.DatabaseId)
-	return FlushDatabaseMeta(UsingDatabase.DatabaseId)
+	return FlushDatabaseMeta(UsingDatabase.DatabaseId),indexs
 }
 //DropTableCheck don't delete the map[id] and the catalog file, just check the legal
 func DropTableCheck(statement types.DropTableStatement) error{
