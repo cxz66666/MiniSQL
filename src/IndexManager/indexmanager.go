@@ -7,7 +7,10 @@ import (
 	"os"
 )
 
-type bpNode []byte
+type bpNode struct {
+	key_length uint16
+	data       []byte
+}
 
 // 块中的位置
 type Position struct {
@@ -42,31 +45,43 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 	key_length := info.Attr_length
 
 	var cur_node bpNode
-	cur_node, _ = BufferManager.BlockRead(filename, 0)
+	cur_node_block, _ := BufferManager.BlockRead(filename, 0)
+	cur_node = bpNode{
+		key_length: key_length,
+		data:       cur_node_block.Data,
+	}
 
 	for {
 		n := cur_node.getSize()
 		var i uint16 = 0
 		for ; i < n; i++ {
-			if res, _ := key_value.Compare(cur_node.getKey(key_length, info.Attr_type, i), value.LessEqual); res == false {
+			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.LessEqual); !res {
 				break
 			}
 		}
-		next_node_id := cur_node.getPointer(key_length, i)
+		next_node_id := cur_node.getPointer(i)
 		var next_node bpNode
-		next_node, _ = BufferManager.BlockRead(filename, next_node_id)
+		next_node_block, _ := BufferManager.BlockRead(filename, next_node_id)
+		next_node = bpNode{
+			key_length: key_length,
+			data:       next_node_block.Data,
+		}
 		if next_node.getSize() == getOrder(key_length) { // If it is full
 			cur_node.splitNode(info, i)
-			if res, _ := key_value.Compare(cur_node.getKey(key_length, info.Attr_type, i), value.LessEqual); res == true {
+			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.LessEqual); res {
 				i++
-				next_node_id = cur_node.getPointer(key_length, i)
-				next_node, _ = BufferManager.BlockRead(filename, next_node_id)
+				next_node_id = cur_node.getPointer(i)
+				next_node_block, _ = BufferManager.BlockRead(filename, next_node_id)
+				next_node = bpNode{
+					key_length: key_length,
+					data:       next_node_block.Data,
+				}
 			}
 		}
 		if cur_node.isLeaf() == 1 {
-			ith_pointer_pos := cur_node.getPointerPosition(key_length, i)
-			copy(cur_node[ith_pointer_pos+4+key_length:], cur_node[ith_pointer_pos:])
-			cur_node.setFilePointer(key_length, i, pos)
+			ith_pointer_pos := cur_node.getPointerPosition(i)
+			copy(cur_node.data[ith_pointer_pos+4+key_length:], cur_node.data[ith_pointer_pos:])
+			cur_node.setFilePointer(i, pos)
 			break
 		}
 		cur_node = next_node
@@ -79,25 +94,33 @@ func Delete(info IndexInfo, key_value value.Value, pos Position) error {
 	key_length := info.Attr_length
 
 	var cur_node bpNode
-	cur_node, _ = BufferManager.BlockRead(filename, 0)
+	cur_node_block, _ := BufferManager.BlockRead(filename, 0)
+	cur_node = bpNode{
+		key_length: key_length,
+		data:       cur_node_block.Data,
+	}
 
 	for {
 		n := cur_node.getSize()
 		var i uint16 = 0
 		for ; i < n; i++ {
-			if res, _ := key_value.Compare(cur_node.getKey(key_length, info.Attr_type, i), value.LessEqual); res == false {
+			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.LessEqual); !res {
 				break
 			}
 		}
-		next_node_id := cur_node.getPointer(key_length, i)
+		next_node_id := cur_node.getPointer(i)
 		var next_node bpNode
-		next_node, _ = BufferManager.BlockRead(filename, next_node_id)
+		next_node_block, _ := BufferManager.BlockRead(filename, next_node_id)
+		next_node = bpNode{
+			key_length: key_length,
+			data:       next_node_block.Data,
+		}
 		if next_node.getSize() == (getOrder(key_length)-1)/2 { // If it is in danger of lack of node
 			// Save the day!
 		}
 		if cur_node.isLeaf() == 1 {
-			ith_pointer_pos := cur_node.getPointerPosition(key_length, i)
-			copy(cur_node[ith_pointer_pos:], cur_node[ith_pointer_pos+4+key_length:])
+			ith_pointer_pos := cur_node.getPointerPosition(i)
+			copy(cur_node.data[ith_pointer_pos:], cur_node.data[ith_pointer_pos+4+key_length:])
 			break
 		}
 		cur_node = next_node
@@ -129,12 +152,5 @@ func Create(info IndexInfo, pos_in_record int, record_length int) error {
 		fmt.Println(err)
 		return err
 	}
-	buffer, err := BufferManager.BlockRead(filename, 0)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	buffer[0] = 1 //  IsLeaf[root] = true
-	buffer[2] = 0 //  n[root] = 0
 	return nil
 }
