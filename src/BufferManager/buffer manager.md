@@ -2,35 +2,71 @@
 
 buffer manager控制与文件交互的 block 的控制，可以看做一个 cache。
 
-因为我们没有抽象层，所以 buffer 内部的编号不对外暴露，只有全局的 block_id 暴露
+buffer内部编号为int类型，外界输入的filename和blockId拼接会唯一对应一个int索引，该索引并不是buffer内部的编号，因为buffer内部为链表+map，并非数组，所以该索引只是起到代替string的作用，加速查找
 
 
 
-read 从文件中读取一个记录 给定文件名，block id， offset
+#### Block类
 
-write 写入文件一个记录 给定文件名， block id， offset
+- FileName、block_id初始时会写入
+- dirty代表该块是否被写过，如果写过请使用SetDirty方法
+- pin代表该块是否被pin住，如果要pin某个块，请使用PinBlock方法，同样使用UnPinBlock方法解锁
+- Data为对外暴露的数据，为大小4KB的切片，可以直接以你喜欢的方式修改，但是修改时请使用SetDirty置为脏
+- mutex为互斥锁，当使用getBlock拿到该block的指针时，bm会自动给block上锁，因此使用完一个block后**务必**使用FinishRead释放锁，不然就会产生死锁再也无法拿到
 
-pin 锁住一个block 给定 block id
 
-unpin 解锁 给定 block id
 
-flush 强制写回 给定 block id
+暴露方法：
 
-flushall 全部强制写回 无参数
+- SetDirty
+- PinBlock
+- UnPinBlock
+- ==FinishRead==
 
-```go
-//所有的block_id均为全局ID，内部ID不对外开放，bool返回值表示是否操作成功。
-func RecordReader(filename string, block_id int) byte[]
-func RecordWriter(filename string, block_id int, record byte[]) bool
-func BlockPinner(block_id int) bool
-func BlockUnpinner(block_id int) bool
-func BlockFlusher(block_id int) bool
-func BlockFlushall() bool
+内部方法（无需外部调用）：
+
+- read 读取filename和blockid指定的一段内容，如果该block为dirty，则不会read，而是会flush
+- flush 如果不为dirty，直接返回，否则写入data
+- mark 置filename和bid位
+- reset 重置filename和bid
+
+
+
+#### BM对外暴露函数
+
+以下内容全部不检查错误，如果按规则来基本不会产生错误
+
 ```
+//读取指定filename和bid，同时加互斥锁 失败返回err
+func BlockRead(filename string, block_id uint16) (*Block, error)
+```
+
+
+
+```
+//获取当前文件有多少块，拿到后0——t-1为可用区间
+func GetBlockNumber(fileName string) (uint16,error)  
+```
+
+
+
+```
+//新加一块，同时加入缓存，返回blockid
+func NewBlock(filename string) (uint16, error) 
+```
+
+
+
+```
+//强制刷新所有块，但是不会清出缓存
+func BlockFlushAll() (bool, error) 
+```
+
+
 
 
 
 ## 之后
 
-有需求可以实现互斥锁
+有需求可以实现读写锁
 

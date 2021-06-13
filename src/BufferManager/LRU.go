@@ -1,12 +1,13 @@
 package BufferManager
-const InitSize=256
+
+const InitSize = 1024
 
 type LRUList struct {
 	root Block
-	len int
+	len  int
 }
 
-func NewLRUList()*LRUList {
+func NewLRUList() *LRUList {
 	l := new(LRUList)
 	l.root.next = &l.root
 	l.root.prev = &l.root
@@ -18,14 +19,14 @@ func (l *LRUList) Len() int {
 	return l.len
 }
 
-func (l *LRUList)Front()*Block  {
-	if l.len==0{
+func (l *LRUList) Front() *Block {
+	if l.len == 0 {
 		return nil
 	}
 	return l.root.next
 }
 
-func (l *LRUList)insert(e,at *Block)*Block  {
+func (l *LRUList) insert(e, at *Block) *Block {
 	n := at.next
 	at.next = e
 	e.prev = at
@@ -35,7 +36,7 @@ func (l *LRUList)insert(e,at *Block)*Block  {
 	return e
 }
 
-func (l *LRUList)remove(e *Block)*Block  {
+func (l *LRUList) remove(e *Block) *Block {
 	e.prev.next = e.next
 	e.next.prev = e.prev
 	e.next = nil
@@ -43,59 +44,66 @@ func (l *LRUList)remove(e *Block)*Block  {
 	l.len--
 	return e
 }
-func (l *LRUList)moveToBack(e *Block)  {
+func (l *LRUList) moveToBack(e *Block) {
 	if l.root.prev == e {
 		return
 	}
+	//fmt.Println(e)
 	l.insert(l.remove(e), l.root.prev)
 }
 
-func (l *LRUList)appendToBack(e *Block)  {
+func (l *LRUList) appendToBack(e *Block) {
 	l.insert(e, l.root.prev)
 }
 
-
 type LRUCache struct {
-	Size int
-	root *LRUList
-	blockMap map[string]*Block
+	Size     int
+	root     *LRUList
+	blockMap map[int]*Block
 }
 
-func NewLRUCache()*LRUCache  {
-	cache:=new(LRUCache)
-	cache.Size=InitSize
-	cache.root=NewLRUList()
-	cache.blockMap=make(map[string]*Block,InitSize)
+func NewLRUCache() *LRUCache {
+	cache := new(LRUCache)
+	cache.Size = InitSize
+	cache.root = NewLRUList()
+	cache.blockMap = make(map[int]*Block, InitSize*2)
 	return cache
 }
 
-func (cache *LRUCache) PutBlock(value *Block) {
-	var nameAndId=connectNameId(value.Filename,value.BlockId)
-	if 	_,ok:=cache.blockMap[nameAndId];ok {
-		cache.blockMap[nameAndId]=value
+func (cache *LRUCache) PutBlock(value *Block, index int) {
+	if _, ok := cache.blockMap[index]; ok {
+		//fmt.Println(index)
+		cache.blockMap[index] = value
 		cache.root.moveToBack(value)
 		return
 	}
 	//maybe it's wrong, I'm not sure
-	if cache.Size>=len(cache.blockMap) {
-		var temp *Block
-		for temp=cache.root.Front();temp.Pin;temp=temp.next{
-
+	if len(cache.blockMap) >= cache.Size {
+		var temp = cache.root.Front()
+		if temp != nil {
+			for ; temp.pin; temp = temp.next {
+			}
+			temp.mutex.Lock()
+			defer temp.mutex.Unlock()
+			temp.flush()
+			cache.root.remove(temp)
+			oldIndex := Query2Int(nameAndPos{fileName: temp.filename, blockId: temp.blockid})
+			delete(cache.blockMap, oldIndex)
 		}
-		temp.mutex.Lock()
-		defer temp.mutex.Unlock()
-		temp.flush()
-		cache.root.remove(temp)
-		delete(cache.blockMap,nameAndId)
+
 	}
 
 	cache.root.appendToBack(value)
-	cache.blockMap[nameAndId]=value
+
+	//fmt.Println(index)
+	cache.blockMap[index] = value
 }
 
-func (cache *LRUCache)GetBlock(nameAndId string) (bool,*Block)  {
-	if node,ok:=cache.blockMap[nameAndId];ok {
-		return true,node
+func (cache *LRUCache) GetBlock(pos int) (bool, *Block) {
+
+	if node, ok := cache.blockMap[pos]; ok {
+		cache.root.moveToBack(node)
+		return true, node
 	}
-	return false,nil
+	return false, nil
 }
