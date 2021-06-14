@@ -50,13 +50,22 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 
 	M := getOrder(key_length)
 
-	for cur_node.isLeaf() == 0 {
+	for {
 		n := cur_node.getSize()
 		var i uint16
 		for i = 0; i < n; i++ {
-			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.Great); res {
+			if res, _ := key_value.Compare(cur_node.getKey(i, info.Attr_type), value.Great); res {
 				break
 			}
+		}
+		if cur_node.isLeaf() == 1 {
+			cur_node_block.SetDirty()
+			cur_node.makeSpace(i)
+			cur_node.setFilePointer(i, pos)
+			cur_node.setKey(i, info.Attr_type, key_value)
+			cur_node.setSize(cur_node.getSize() + 1)
+			cur_node_block.FinishRead()
+			break
 		}
 		next_node_id := cur_node.getPointer(i)
 		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
@@ -70,18 +79,6 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 			cur_node_block = next_node_block
 		}
 	}
-	n := cur_node.getSize()
-	var i uint16
-	for i = 0; i <= n; i++ {
-		if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.Great); res {
-			break
-		}
-	}
-	cur_node_block.SetDirty()
-	cur_node.makeSpace(i)
-	cur_node.setFilePointer(i, pos)
-	cur_node.setKey(i, info.Attr_type, key_value)
-	cur_node_block.FinishRead()
 	return nil
 }
 
@@ -97,7 +94,7 @@ func Delete(info IndexInfo, key_value value.Value, pos Position) error {
 		n := cur_node.getSize()
 		var i uint16 = 0
 		for ; i < n; i++ {
-			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.Great); res {
+			if res, _ := key_value.Compare(cur_node.getKey(i, info.Attr_type), value.Great); res {
 				break
 			}
 		}
@@ -117,7 +114,7 @@ func Delete(info IndexInfo, key_value value.Value, pos Position) error {
 	n := cur_node.getSize()
 	var i uint16
 	for i = 0; i <= n; i++ {
-		if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), value.Equal); res {
+		if res, _ := key_value.Compare(cur_node.getKey(i, info.Attr_type), value.Equal); res {
 			break
 		}
 	}
@@ -158,7 +155,7 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 				cur_n = n - 1
 			}
 			for i = 0; i <= cur_n; i++ {
-				if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, i), cur_compare_type); res {
+				if res, _ := key_value.Compare(cur_node.getKey(i, info.Attr_type), cur_compare_type); res {
 					break
 				}
 			}
@@ -199,7 +196,7 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		}
 
 		for j := i; j <= n; j++ {
-			if res, _ := key_value.Compare(cur_node.getKey(info.Attr_type, j), compare_type); !res {
+			if res, _ := key_value.Compare(cur_node.getKey(j, info.Attr_type), compare_type); !res {
 				failed = true
 				break
 			}

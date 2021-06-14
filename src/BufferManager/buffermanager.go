@@ -4,7 +4,7 @@ import (
 	"os"
 )
 
-const BlockSize = 4096 // for debug
+const BlockSize = 64 // for debug
 var blockBuffer *LRUCache
 var connector = "*"
 

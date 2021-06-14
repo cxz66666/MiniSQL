@@ -20,7 +20,7 @@ func (node bpNode) print() {
 
 func (node bpNode) nodeInit() {
 	node.setSize(0)
-	node.setLeaf(0)
+	node.setLeaf(1)
 }
 
 func getBpNode(filename string, block_id uint16, key_length uint16) (node bpNode, block *BufferManager.Block) {
@@ -55,14 +55,14 @@ func (node bpNode) setLeaf(leaf uint8) {
 
 // Get the size of the node
 func (node bpNode) getSize() (size uint16) {
-	buf := bytes.NewBuffer(node.data[1:2])
+	buf := bytes.NewBuffer(node.data[1:3])
 	binary.Read(buf, binary.LittleEndian, &size)
 	return
 }
 
 // Set the size of the node
 func (node bpNode) setSize(size uint16) {
-	buf := bytes.NewBuffer(node.data[1:2])
+	buf := bytes.NewBuffer(node.data[1:3])
 	binary.Write(buf, binary.LittleEndian, size)
 }
 
@@ -95,7 +95,7 @@ func (node bpNode) getKeyPosition(k uint16) (offset uint16) {
 // Get P[k] (for internal node)
 func (node bpNode) getPointer(k uint16) (block_id uint16) {
 	from := node.getPointerPosition(k)
-	to := from + 1
+	to := from + 2
 	buf := bytes.NewBuffer(node.data[from:to])
 	binary.Read(buf, binary.LittleEndian, &block_id)
 	return
@@ -104,7 +104,7 @@ func (node bpNode) getPointer(k uint16) (block_id uint16) {
 // Set P[k]
 func (node bpNode) setPointer(k uint16, block_id uint16) {
 	from := node.getPointerPosition(k)
-	to := from + 1
+	to := from + 2
 	buf := bytes.NewBuffer([]byte{})
 	binary.Write(buf, binary.LittleEndian, block_id)
 	copy(node.data[from:to], buf.Bytes())
@@ -113,7 +113,7 @@ func (node bpNode) setPointer(k uint16, block_id uint16) {
 // Get P[k] (for leaf node)
 func (node bpNode) getFilePointer(k uint16) (pos Position) {
 	from := node.getPointerPosition(k)
-	to := from + 1
+	to := from + 2
 	buf := bytes.NewBuffer(node.data[from:to])
 	binary.Read(buf, binary.LittleEndian, &pos.block)
 
@@ -128,7 +128,7 @@ func (node bpNode) getFilePointer(k uint16) (pos Position) {
 // Set P[k] (for leaf node)
 func (node bpNode) setFilePointer(k uint16, pos Position) {
 	from := node.getPointerPosition(k)
-	to := from + 1
+	to := from + 2
 	buf := bytes.NewBuffer(node.data[from:to])
 	binary.Write(buf, binary.LittleEndian, pos.block)
 
@@ -137,41 +137,38 @@ func (node bpNode) setFilePointer(k uint16, pos Position) {
 	to += 2
 	buf = bytes.NewBuffer(node.data[from:to])
 	binary.Write(buf, binary.LittleEndian, pos.offset)
-	return
 }
 
 // Get previous leaf
 func (node bpNode) getPrev() (block_id uint16) {
-	buf := bytes.NewBuffer(node.data[3:4])
+	buf := bytes.NewBuffer(node.data[3:5])
 	binary.Read(buf, binary.LittleEndian, &block_id)
 	return
 }
 
 // Set prev
 func (node bpNode) setPrev(block_id uint16) {
-	buf := bytes.NewBuffer(node.data[3:4])
+	buf := bytes.NewBuffer(node.data[3:5])
 	binary.Write(buf, binary.LittleEndian, block_id)
-	return
 }
 
 // Get next leaf
 func (node bpNode) getNext() (block_id uint16) {
-	buf := bytes.NewBuffer(node.data[5:6])
+	buf := bytes.NewBuffer(node.data[5:7])
 	binary.Read(buf, binary.LittleEndian, &block_id)
 	return
 }
 
 // Set Next
 func (node bpNode) setNext(block_id uint16) {
-	buf := bytes.NewBuffer(node.data[5:6])
+	buf := bytes.NewBuffer(node.data[5:7])
 	binary.Write(buf, binary.LittleEndian, block_id)
-	return
 }
 
 // Get Key[k]
-func (node bpNode) getKey(value_type value.ValueType, k uint16) value.Value {
+func (node bpNode) getKey(k uint16, value_type value.ValueType) value.Value {
 	from := node.getKeyPosition(k)
-	to := from + node.key_length - 1
+	to := from + node.key_length
 	val, err := value.Byte2Value(node.data[from:to], value_type, int(node.key_length))
 	if err != nil {
 		panic(err)
@@ -183,7 +180,7 @@ func (node bpNode) getKey(value_type value.ValueType, k uint16) value.Value {
 // Set Key[k]
 func (node bpNode) setKey(k uint16, value_type value.ValueType, key_value value.Value) {
 	from := node.getKeyPosition(k)
-	to := from + node.key_length - 1
+	to := from + node.key_length
 	v2bytes, _ := key_value.Convert2Bytes()
 	copy(node.data[from:to], v2bytes)
 }
@@ -198,6 +195,10 @@ func (node bpNode) getEnd() uint16 {
 	}
 }
 
+func (node bpNode) getBegin() uint16 {
+	return node.getPointerPosition(0)
+}
+
 // Get the file name for a certain index
 func (info *IndexInfo) getFileName() string {
 	return info.Table_name + "_" + info.Attr_name + index_file_suffix
@@ -208,7 +209,7 @@ func copyKey(des bpNode, des_id uint16, src bpNode, src_id uint16) {
 	key_length := des.key_length
 	src_key_pos := src.getKeyPosition(src_id)
 	des_key_pos := des.getKeyPosition(des_id)
-	copy(des.data[des_key_pos:des_key_pos+key_length-1], src.data[src_key_pos:src_key_pos+key_length-1])
+	copy(des.data[des_key_pos:des_key_pos+key_length], src.data[src_key_pos:src_key_pos+key_length])
 }
 
 // Copy P[src_id] from src into P[des_id] of des
@@ -221,7 +222,7 @@ func copyPointer(des bpNode, des_id uint16, src bpNode, src_id uint16) {
 	}
 	src_pointer_pos := src.getPointerPosition(src_id)
 	des_pointer_pos := des.getPointerPosition(des_id)
-	copy(des.data[des_pointer_pos:des_pointer_pos+pointer_length-1], src.data[src_pointer_pos:src_pointer_pos+pointer_length-1])
+	copy(des.data[des_pointer_pos:des_pointer_pos+pointer_length], src.data[src_pointer_pos:src_pointer_pos+pointer_length])
 }
 
 // Make space for {pointer, key} at position k
@@ -275,27 +276,21 @@ func (parent bpNode) splitNode(info IndexInfo, k uint16) {
 	new_node.setSize((M - 1) / 2)
 	new_node.setLeaf(evil_node.isLeaf())
 	evil_half := evil_node.getPointerPosition((M + 1) / 2)
-	new_begin := new_node.getPointerPosition(0)
-	var subnode_length uint16
+	new_begin := new_node.getBegin()
 
 	if evil_node.isLeaf() == 1 { // If this is a leaf
-		subnode_length = key_length + 4
 		evil_node.setSize((M + 1) / 2)
 		new_node.setPrev(evil_node_id)
 		new_node.setNext(evil_node.getNext())
 	} else {
-		subnode_length = key_length + 2
 		evil_node.setSize((M - 1) / 2)
-
 	}
 	copy(new_node.data[new_begin:], evil_node.data[evil_half:])
 
 	// Deal with parent node
 	parent.setSize(parent.getSize() + 1)
-	kth_key_pos := parent.getKeyPosition(k)                                   // Position of the kth key
-	copy(parent.data[kth_key_pos+subnode_length:], parent.data[kth_key_pos:]) // Make space for the new node
-	mid_key := evil_node.getKeyPosition((M - 1) / 2)                          // The medium key in the evil node
-	copy(parent.data[kth_key_pos:kth_key_pos+key_length-1], evil_node.data[mid_key:mid_key+key_length-1])
+	parent.makeSpace(k)                    // Make space for the new key & pointer
+	copyKey(parent, k, evil_node, (M-1)/2) // TODO: Could be a problem here
 	parent.setPointer(k, new_node_id)
 }
 
@@ -308,30 +303,29 @@ func (parent bpNode) mergeNode(info IndexInfo, k uint16) {
 	evil_node_id := parent.getPointer(k)
 	evil_sib_id := parent.getPointer(k + 1)
 
-	var evil_node, evil_sib bpNode
-
 	evil_node, evil_node_block := getBpNode(filename, evil_node_id, key_length)
 	evil_node_block.SetDirty()
 	defer evil_node_block.FinishRead()
 
-	evil_node, evil_sib_block := getBpNode(filename, evil_sib_id, key_length)
+	evil_sib, evil_sib_block := getBpNode(filename, evil_sib_id, key_length)
 	evil_sib_block.SetDirty()
 	defer evil_sib_block.FinishRead()
 
-	evil_node.setSize(evil_node.getSize() + evil_sib.getSize())
+	evil_node_size := evil_node.getSize()
+	evil_sib_size := evil_sib.getSize()
 
 	if evil_node.isLeaf() == 1 {
 		evil_node.setNext(evil_sib.getNext())
 	}
 	evil_node_end := evil_node.getEnd()
-	evil_sib_begin := evil_node.getPointerPosition(0)
-	kth_key_pos := parent.getKeyPosition(k)
+	evil_sib_begin := evil_node.getBegin()
 	if evil_node.isLeaf() == 0 {
-		copy(evil_node.data[evil_node_end:evil_node_end+key_length-1], parent.data[kth_key_pos:kth_key_pos+key_length-1])
+		copyKey(evil_node, evil_node_size, parent, k)
 		evil_node_end += key_length
 	}
 	copy(evil_node.data[evil_node_end:], evil_sib.data[evil_sib_begin:])
-	copy(parent.data[kth_key_pos:], parent.data[kth_key_pos+key_length+2:])
+	parent.shrinkSpace(k)
+	evil_node.setSize(evil_node_size + evil_sib_size)
 }
 
 // Move the first node of (k + 1) th child to k-th node
