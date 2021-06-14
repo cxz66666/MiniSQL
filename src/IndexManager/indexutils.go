@@ -8,14 +8,20 @@ import (
 	"minisql/src/Interpreter/value"
 )
 
-func (node bpNode) print() {
-	fmt.Println("Key length: " + fmt.Sprint(node.key_length) + "\n")
-	fmt.Println("Is leaf: " + fmt.Sprint(node.isLeaf()) + "\n")
-	fmt.Println("Size: " + fmt.Sprint(node.getSize()) + "\n")
+func (node bpNode) print(value_type value.ValueType) {
+	fmt.Println("Is leaf: " + fmt.Sprint(node.isLeaf()))
+	fmt.Println("Size: " + fmt.Sprint(node.getSize()))
 	n := node.getSize()
-	for i := uint16(0); i <= n; i++ {
-		fmt.Println("" + fmt.Sprint(node.getPointer(i)))
+	if node.isLeaf() == 0 {
+		for i := uint16(0); i <= n; i++ {
+			fmt.Print(" " + fmt.Sprint(node.getPointer(i)))
+		}
+	} else {
+		for i := uint16(0); i < n; i++ {
+			fmt.Println("Key: " + fmt.Sprint(node.getKey(i, value_type)) + ", Pointer: " + fmt.Sprint(node.getFilePointer(i)))
+		}
 	}
+	fmt.Println()
 }
 
 func (node bpNode) nodeInit() {
@@ -35,12 +41,12 @@ func getBpNode(filename string, block_id uint16, key_length uint16) (node bpNode
 // Get the order of this B+ tree
 // Order is supposed to be the maximum *odd* number that
 // the block is capable of storing that many keys
-func getOrder(key_length uint16) (order uint16) {
-	order = (BufferManager.BlockSize-7)/(key_length+4) - 1
+func getOrder(key_length uint16) uint16 {
+	var order uint16 = (BufferManager.BlockSize-7)/(key_length+4) - 1
 	if (order & 1) == 0 {
 		order--
 	}
-	return
+	return order
 }
 
 // Is this node a leaf?
@@ -54,51 +60,62 @@ func (node bpNode) setLeaf(leaf uint8) {
 }
 
 // Get the size of the node
-func (node bpNode) getSize() (size uint16) {
+func (node bpNode) getSize() uint16 {
+	var size uint16
 	buf := bytes.NewBuffer(node.data[1:3])
 	binary.Read(buf, binary.LittleEndian, &size)
-	return
+	return size
 }
 
 // Set the size of the node
 func (node bpNode) setSize(size uint16) {
-	buf := bytes.NewBuffer(node.data[1:3])
+	buf := bytes.NewBuffer([]byte{})
 	binary.Write(buf, binary.LittleEndian, size)
+	copy(node.data[1:3], buf.Bytes())
+}
+
+func (node bpNode) isFull(M uint16) bool {
+	if node.isLeaf() == 1 {
+		return node.getSize() == M+1
+	} else {
+		return node.getSize() == M
+	}
 }
 
 // Get the start of the P[k]
-func (node bpNode) getPointerPosition(k uint16) (offset uint16) {
+func (node bpNode) getPointerPosition(k uint16) uint16 {
+	var offset uint16
 	if node.isLeaf() == 1 {
 		subnode_length := node.key_length + 4
-		offset = 7 + k*subnode_length
-		return
+		offset = 5 + k*subnode_length
 	} else {
 		subnode_length := node.key_length + 2
 		offset = 3 + k*subnode_length
-		return
 	}
+	return offset
 }
 
 // Get the start of the Key[k]
-func (node bpNode) getKeyPosition(k uint16) (offset uint16) {
+func (node bpNode) getKeyPosition(k uint16) uint16 {
+	var offset uint16
 	if node.isLeaf() == 1 {
 		subnode_length := node.key_length + 4
-		offset = 11 + k*subnode_length
-		return
+		offset = 9 + k*subnode_length
 	} else {
 		subnode_length := node.key_length + 2
 		offset = 5 + k*subnode_length
-		return
 	}
+	return offset
 }
 
 // Get P[k] (for internal node)
-func (node bpNode) getPointer(k uint16) (block_id uint16) {
+func (node bpNode) getPointer(k uint16) uint16 {
+	var block_id uint16
 	from := node.getPointerPosition(k)
 	to := from + 2
 	buf := bytes.NewBuffer(node.data[from:to])
 	binary.Read(buf, binary.LittleEndian, &block_id)
-	return
+	return block_id
 }
 
 // Set P[k]
@@ -111,58 +128,54 @@ func (node bpNode) setPointer(k uint16, block_id uint16) {
 }
 
 // Get P[k] (for leaf node)
-func (node bpNode) getFilePointer(k uint16) (pos Position) {
+func (node bpNode) getFilePointer(k uint16) Position {
+	var block_id, offset uint16
 	from := node.getPointerPosition(k)
 	to := from + 2
 	buf := bytes.NewBuffer(node.data[from:to])
-	binary.Read(buf, binary.LittleEndian, &pos.block)
+	binary.Read(buf, binary.LittleEndian, &block_id)
 
 	// Get Offset
 	from += 2
 	to += 2
 	buf = bytes.NewBuffer(node.data[from:to])
-	binary.Read(buf, binary.LittleEndian, &pos.offset)
-	return
+	binary.Read(buf, binary.LittleEndian, &offset)
+	return Position{
+		block:  block_id,
+		offset: offset,
+	}
 }
 
 // Set P[k] (for leaf node)
 func (node bpNode) setFilePointer(k uint16, pos Position) {
 	from := node.getPointerPosition(k)
 	to := from + 2
-	buf := bytes.NewBuffer(node.data[from:to])
+	buf := bytes.NewBuffer([]byte{})
 	binary.Write(buf, binary.LittleEndian, pos.block)
+	copy(node.data[from:to], buf.Bytes())
 
 	// Get Offset
 	from += 2
 	to += 2
-	buf = bytes.NewBuffer(node.data[from:to])
+	buf = bytes.NewBuffer([]byte{})
 	binary.Write(buf, binary.LittleEndian, pos.offset)
-}
+	copy(node.data[from:to], buf.Bytes())
 
-// Get previous leaf
-func (node bpNode) getPrev() (block_id uint16) {
-	buf := bytes.NewBuffer(node.data[3:5])
-	binary.Read(buf, binary.LittleEndian, &block_id)
-	return
-}
-
-// Set prev
-func (node bpNode) setPrev(block_id uint16) {
-	buf := bytes.NewBuffer(node.data[3:5])
-	binary.Write(buf, binary.LittleEndian, block_id)
 }
 
 // Get next leaf
-func (node bpNode) getNext() (block_id uint16) {
-	buf := bytes.NewBuffer(node.data[5:7])
+func (node bpNode) getNext() uint16 {
+	var block_id uint16
+	buf := bytes.NewBuffer(node.data[3:5])
 	binary.Read(buf, binary.LittleEndian, &block_id)
-	return
+	return block_id
 }
 
 // Set Next
 func (node bpNode) setNext(block_id uint16) {
-	buf := bytes.NewBuffer(node.data[5:7])
+	buf := bytes.NewBuffer([]byte{})
 	binary.Write(buf, binary.LittleEndian, block_id)
+	copy(node.data[3:5], buf.Bytes())
 }
 
 // Get Key[k]
@@ -264,7 +277,6 @@ func (parent bpNode) splitNode(info IndexInfo, k uint16) {
 	// Get the new node and the evil node
 	new_node, new_node_block := getBpNode(filename, new_node_id, key_length)
 	new_node_block.SetDirty()
-	new_node.nodeInit()
 	defer new_node_block.FinishRead()
 
 	evil_node, evil_node_block := getBpNode(filename, evil_node_id, key_length)
@@ -273,25 +285,25 @@ func (parent bpNode) splitNode(info IndexInfo, k uint16) {
 
 	M := getOrder(key_length) // The order of the tree
 
-	new_node.setSize((M - 1) / 2)
+	// Copy half the child into new node
 	new_node.setLeaf(evil_node.isLeaf())
 	evil_half := evil_node.getPointerPosition((M + 1) / 2)
 	new_begin := new_node.getBegin()
-
-	if evil_node.isLeaf() == 1 { // If this is a leaf
-		evil_node.setSize((M + 1) / 2)
-		new_node.setPrev(evil_node_id)
-		new_node.setNext(evil_node.getNext())
-	} else {
-		evil_node.setSize((M - 1) / 2)
-	}
 	copy(new_node.data[new_begin:], evil_node.data[evil_half:])
+	new_node.setSize((M + 1) / 2)
+	evil_node.setSize((M + 1) / 2)
 
 	// Deal with parent node
+	parent.makeSpace(k) // Make space for the new key & pointer
+	if evil_node.isLeaf() == 1 {
+		new_node.setNext(evil_node.getNext())
+		copyKey(parent, k, evil_node, (M+1)/2)
+	} else {
+		copyKey(parent, k, evil_node, (M-1)/2)
+	}
+	parent.setPointer(k, parent.getPointer(k+1))
+	parent.setPointer(k+1, new_node_id)
 	parent.setSize(parent.getSize() + 1)
-	parent.makeSpace(k)                    // Make space for the new key & pointer
-	copyKey(parent, k, evil_node, (M-1)/2) // TODO: Could be a problem here
-	parent.setPointer(k, new_node_id)
 }
 
 // Merge node k with node k + 1
@@ -419,16 +431,18 @@ func handleRootFull(info IndexInfo) {
 	root, root_block := getBpNode(filename, 0, key_length)
 	defer root_block.FinishRead()
 
-	if root.getSize() == getOrder(key_length) {
+	M := getOrder(key_length)
+
+	if root.isFull(M) {
 		// If root is full, make it a child of the new node
 		root_block.SetDirty()
 		new_block_id, _ := BufferManager.NewBlock(filename)
 		new_node, new_node_block := getBpNode(filename, new_block_id, key_length)
 		new_node_block.SetDirty()
-		new_node.nodeInit()
 
 		copy(new_node.data, root.data)
 		root.setSize(0)
+		root.setLeaf(0)
 		root.setPointer(0, new_block_id)
 
 		new_node_block.FinishRead()

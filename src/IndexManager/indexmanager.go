@@ -13,8 +13,8 @@ type bpNode struct {
 
 // 块中的位置
 type Position struct {
-	block  int16
-	offset int16
+	block  uint16
+	offset uint16
 }
 
 /*
@@ -45,7 +45,6 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 
 	handleRootFull(info)
 
-	var cur_node bpNode
 	cur_node, cur_node_block := getBpNode(filename, 0, key_length)
 
 	M := getOrder(key_length)
@@ -69,7 +68,7 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 		}
 		next_node_id := cur_node.getPointer(i)
 		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
-		if next_node.getSize() == M { // If it is full
+		if next_node.isFull(M) { // If it is full
 			next_node_block.FinishRead()
 			cur_node_block.SetDirty()
 			cur_node.splitNode(info, i)
