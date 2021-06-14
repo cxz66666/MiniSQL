@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/peterh/liner"
+	"minisql/src/BufferManager"
 	"minisql/src/CatalogManager"
 	"minisql/src/Interpreter/parser"
 	"minisql/src/Interpreter/types"
@@ -18,7 +19,12 @@ const firstPrompt="minisql>"
 const secondPrompt="      ->"
 
 func InitDB() error {
-	return 	CatalogManager.LoadDbMeta()
+	err:= CatalogManager.LoadDbMeta()
+	if err!=nil {
+		return err
+	}
+	BufferManager.InitBuffer()
+	return nil
 }
 func expandPath(path string) (string,error)  {
 	if strings.HasPrefix(path, "~/") {
@@ -95,7 +101,7 @@ LOOP:
 			trimInput:=strings.TrimSpace(input) //get the input without front and backend space
 			if len(trimInput)!=0 {
 				ll.AppendHistory(input)
-				if !beginSQLParse&&(trimInput=="exit"||strings.HasPrefix(trimInput,"exit;")) {
+				if !beginSQLParse&&(trimInput=="quit"||strings.HasPrefix(trimInput,"quit;")) {
 					r<-err
 					return
 				}

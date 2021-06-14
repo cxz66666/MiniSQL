@@ -46,6 +46,7 @@ const (
 	Update
 	Delete
 	Select
+	ExecFile
 )
 
 type DStatements interface {
@@ -188,6 +189,13 @@ func (s SelectStatement) GetOperationType() OperationType {
 	return Select
 }
 
+type ExecFileStatement struct {
+	FileName string
+}
+
+func (s ExecFileStatement)GetOperationType() OperationType  {
+	return ExecFile
+}
 type (
 	Where struct {
 		Expr Expr
@@ -282,7 +290,7 @@ func (e *ComparisonExprLSRV)Debug()  {
 	fmt.Println(e.Left,e.Operator,e.Right.String())
 }
 func (e *ComparisonExprLSRV)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
-	if e.Left==indexName{
+	if e.Left==indexName&&e.Operator!=value.NotEqual{
 		return true,&ComparisonExprLSRV{Left: e.Left,Operator: e.Operator,Right: e.Right}
 	}
 	return false,nil
@@ -321,7 +329,7 @@ func (e *ComparisonExprLVRS)Debug()  {
 	fmt.Println(e.Left.String(),e.Operator,e.Right)
 }
 func (e *ComparisonExprLVRS)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
-	if e.Right==indexName{
+	if e.Right==indexName&&e.Operator!=value.NotEqual{
 		return true,&ComparisonExprLSRV{Left: e.Right,Operator: e.Operator,Right: e.Left}
 	}
 	return false,nil
@@ -380,7 +388,6 @@ func (e *ComparisonExprLSRS)Debug()  {
 func (e *ComparisonExprLSRS)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
 	return false,nil
 }
-
 
 
 

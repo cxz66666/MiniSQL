@@ -49,7 +49,7 @@ import (
 %token<str> TRUE FALSE allow_commit_timestamp
 %token<empty> '(' ',' ')' ';' '*'
 %left <str> '='  '<' '>' LE GE NE
-%token<str> CREATE  DROP
+%token<str> CREATE  DROP EXECFILE
 %token<str> USE DATABASE TABLE INDEX STORING
 %token<str> SELECT WHERE FROM LIMIT OFFSET VALUES
 %token<str> INSERT INTO UPDATE DELETE
@@ -116,6 +116,16 @@ statement:
   | insert_stmt ';'
   | update_stmt ';'
   | delete_stmt ';'
+  | execfile_stmt ';'
+
+execfile_stmt:
+   EXECFILE IDENT_ALL
+   {
+     s := types.ExecFileStatement{
+           FileName: $2,
+     }
+     yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+   }
 create_database:
   CREATE DATABASE database_id
   {

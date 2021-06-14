@@ -122,7 +122,8 @@ var keywords = map[string]int{
 	"limit":LIMIT,
 	"OFFSET":OFFSET,
 	"offset":OFFSET,
-
+	"execfile":EXECFILE,
+	"EXECFILE":EXECFILE,
 
 }
 

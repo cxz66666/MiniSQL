@@ -66,6 +66,7 @@ func CreateTableAPI(statement types.CreateTableStatement) error {
 			return err
 		}
 	}
+	return nil
 }
 
 
