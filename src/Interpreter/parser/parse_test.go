@@ -17,7 +17,6 @@ var sql_strings=[]string{
 
 func BenchmarkParse(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-
 			result,err:=Parse(strings.NewReader(sql_strings[0]))
 			fmt.Println(result,err)
 

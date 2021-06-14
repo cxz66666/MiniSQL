@@ -8,14 +8,15 @@ import (
 
 type lexerWrapper struct {
 	impl        *lexer.LexerImpl
-	result      []types.DStatements
+	channelSend     chan<- types.DStatements
 	lastLiteral string
 	err         error
 }
 
-func newLexerWrapper(li *lexer.LexerImpl) *lexerWrapper {
+func newLexerWrapper(li *lexer.LexerImpl,channel  chan<- types.DStatements) *lexerWrapper {
 	return &lexerWrapper{
 		impl: li,
+		channelSend: channel,
 	}
 }
 
@@ -29,7 +30,6 @@ func (l *lexerWrapper) Lex(lval *yySymType) int {
 	tokVal := r.Token
 	lval.str = r.Literal
 	lval.LastToken = tokVal
-
 	return tokVal
 }
 

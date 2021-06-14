@@ -34,6 +34,7 @@ const (
 	ANGLE_RIGHT_EQUAL //>=
 	ANGLE_RIGHT       // >
 	NOT_EQUAL 		  // <> or !=
+	POINT            //  .
 )
 
 // Scanner represents a lexical scanner.
@@ -76,6 +77,8 @@ func (s *Scanner) Scan() (tok Token, lit string) {
 			return s.scanString()
 		}
 		return APOSTROPNE,string(ch)
+	case '.':
+		return POINT,string(ch)
 	case '*':
 		return ASTERISK, string(ch)
 	case ',':

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/peterh/liner"
+	"minisql/src/API"
 	"minisql/src/BufferManager"
 	"minisql/src/CatalogManager"
 	"minisql/src/Interpreter/parser"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 
@@ -79,6 +81,10 @@ func runShell(r chan<- error)  {
 		ll.AppendHistory(s.Text())
 	}
 	InitDB()
+
+	StatementChannel:=make(chan types.DStatements,100)
+	FinishChannel:=make(chan struct{},100)
+	go API.HandleOneParse(StatementChannel,FinishChannel)  //begin the runtime for exec
 	var beginSQLParse=false
 	var sqlText=make([]byte,0,100)
 	for { //each sql
@@ -102,6 +108,10 @@ LOOP:
 			if len(trimInput)!=0 {
 				ll.AppendHistory(input)
 				if !beginSQLParse&&(trimInput=="quit"||strings.HasPrefix(trimInput,"quit;")) {
+					close(StatementChannel)
+					for _=range FinishChannel {
+
+					}
 					r<-err
 					return
 				}
@@ -114,24 +124,17 @@ LOOP:
 				}
 			}
 		}
-		ans,err:=parser.Parse(strings.NewReader(string(sqlText)))
-		fmt.Println(string(sqlText))
+		beginTime:=time.Now()
+		err=parser.Parse(strings.NewReader(string(sqlText)),StatementChannel)
+		//fmt.Println(string(sqlText))
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		for _,item:=range *ans{
-			fmt.Println(item)
-			if item.GetOperationType()==types.Select {
-				if item.(types.SelectStatement).Where!=nil {
-				fmt.Println(item.(types.SelectStatement).Where.Expr.GetTargetCols())
-					item.(types.SelectStatement).Where.Expr.Debug()
-				}
-			}
-		}
+		<-FinishChannel
+		durationTime:=time.Since(beginTime)
+		fmt.Println("Finish operation at: ",durationTime)
 	}
-
-
 }
 func main() {
 	errChan:=make(chan error)

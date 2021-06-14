@@ -5,37 +5,50 @@ import (
 	"errors"
 	"fmt"
 	"minisql/src/CatalogManager"
+	"minisql/src/Interpreter/parser"
 	"minisql/src/Interpreter/types"
 	"minisql/src/Interpreter/value"
 	"minisql/src/RecordManager"
+	"minisql/src/Utils"
+	"os"
+	"sync"
 )
 
-func HandleOneParse(statement types.DStatements) error  {
-	switch statement.GetOperationType() {
-	case types.CreateDatabase:
-		return CreateDatabaseAPI(statement.(types.CreateDatabaseStatement))
-	case types.UseDatabase:
-		return UseDatabaseAPI(statement.(types.UseDatabaseStatement))
-	case types.CreateTable:
-		return CreateTableAPI(statement.(types.CreateTableStatement))
-	case types.CreateIndex:
-		return CreateIndexAPI(statement.(types.CreateIndexStatement))
-	case types.DropTable:
-		return DropTableAPI(statement.(types.DropTableStatement))
-	case types.DropIndex:
-		return DropIndexAPI(statement.(types.DropIndexStatement))
-	case types.DropDatabase:
-		return DropDatabaseAPI(statement.(types.DropDatabaseStatement))
-	case types.Insert:
-		return InsertAPI(statement.(types.InsertStament))
-	case types.Update:
-		return UpdateAPI(statement.(types.UpdateStament))
-	case types.Delete:
-		return DeleteAPI(statement.(types.DeleteStatement))
-	case types.Select:
-		return SelectAPI(statement.(types.SelectStatement))
+func HandleOneParse( dataChannel <-chan types.DStatements,stopChannel chan<- struct{})   {
+	var err error
+	for statement:=range dataChannel {
+		//fmt.Println(statement)
+		switch statement.GetOperationType() {
+		case types.CreateDatabase:
+			err= CreateDatabaseAPI(statement.(types.CreateDatabaseStatement))
+		case types.UseDatabase:
+			err= UseDatabaseAPI(statement.(types.UseDatabaseStatement))
+		case types.CreateTable:
+			err= CreateTableAPI(statement.(types.CreateTableStatement))
+		case types.CreateIndex:
+			err= CreateIndexAPI(statement.(types.CreateIndexStatement))
+		case types.DropTable:
+			err= DropTableAPI(statement.(types.DropTableStatement))
+		case types.DropIndex:
+			err= DropIndexAPI(statement.(types.DropIndexStatement))
+		case types.DropDatabase:
+			err= DropDatabaseAPI(statement.(types.DropDatabaseStatement))
+		case types.Insert:
+			err= InsertAPI(statement.(types.InsertStament))
+		case types.Update:
+			err= UpdateAPI(statement.(types.UpdateStament))
+		case types.Delete:
+			err= DeleteAPI(statement.(types.DeleteStatement))
+		case types.Select:
+			err= SelectAPI(statement.(types.SelectStatement))
+		case types.ExecFile:
+			err=ExecFileAPI(statement.(types.ExecFileStatement))
+		}
+		//fmt.Println(err)
+		stopChannel<- struct{}{}
 	}
-	return errors.New("Unresolved type for parse")
+	fmt.Println(err)
+	close(stopChannel)
 }
 
 func CreateDatabaseAPI(statement types.CreateDatabaseStatement)  error {
@@ -157,6 +170,39 @@ func SelectAPI(statement types.SelectStatement) error  {
 			b.WriteString(v.String())
 		}
 		fmt.Println(b.String())
+	}
+	return nil
+}
+
+func ExecFileAPI(statement types.ExecFileStatement) error  {
+	StatementChannel:=make(chan types.DStatements,100)
+	FinishChannel:=make(chan struct{},100)
+	if !Utils.Exists(statement.FileName) {
+		return errors.New("file "+statement.FileName+" don't exist")
+	}
+	reader,err:=os.Open(statement.FileName)
+	defer reader.Close()
+	if err!=nil{
+		return errors.New("open file "+statement.FileName+" fail")
+	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go HandleOneParse(StatementChannel,FinishChannel)  //begin the runtime for exec
+	go func() {
+		defer wg.Done()
+		for _=range FinishChannel {
+
+		}
+	}()
+	err=parser.Parse(reader,StatementChannel)
+
+	close(StatementChannel)
+
+	wg.Wait()
+
+	if err!=nil {
+		return err
 	}
 	return nil
 }
