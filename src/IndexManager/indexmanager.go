@@ -53,7 +53,7 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 		n := cur_node.getSize()
 		var i uint16
 		for i = 0; i < n; i++ {
-			if res, _ := key_value.Compare(cur_node.getKey(i, info.Attr_type), value.Great); res {
+			if res, _ := key_value.Compare(cur_node.getKey(i, info.Attr_type), value.Less); res {
 				break
 			}
 		}
@@ -93,7 +93,7 @@ func Delete(info IndexInfo, key_value value.Value, pos Position) error {
 		n := cur_node.getSize()
 		var i uint16 = 0
 		for ; i < n; i++ {
-			if res, _ := key_value.Compare(cur_node.getKey(i, info.Attr_type), value.Great); res {
+			if res, _ := key_value.Compare(cur_node.getKey(i, info.Attr_type), value.Less); res {
 				break
 			}
 		}

@@ -290,15 +290,17 @@ func (parent bpNode) splitNode(info IndexInfo, k uint16) {
 	evil_half := evil_node.getPointerPosition((M + 1) / 2)
 	new_begin := new_node.getBegin()
 	copy(new_node.data[new_begin:], evil_node.data[evil_half:])
-	new_node.setSize((M + 1) / 2)
-	evil_node.setSize((M + 1) / 2)
 
 	// Deal with parent node
 	parent.makeSpace(k) // Make space for the new key & pointer
 	if evil_node.isLeaf() == 1 {
+		new_node.setSize((M + 1) / 2)
+		evil_node.setSize((M + 1) / 2)
 		new_node.setNext(evil_node.getNext())
 		copyKey(parent, k, evil_node, (M+1)/2)
 	} else {
+		new_node.setSize((M - 1) / 2)
+		evil_node.setSize((M - 1) / 2)
 		copyKey(parent, k, evil_node, (M-1)/2)
 	}
 	parent.setPointer(k, parent.getPointer(k+1))

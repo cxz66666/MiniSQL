@@ -28,10 +28,6 @@ func initTest() {
 	BufferManager.BlockFlushAll()
 }
 
-func TestSplit(t *testing.T) {
-	initTest()
-}
-
 func (node bpNode) printTree() {
 	node.print(info.Attr_type)
 	n := node.getSize()
@@ -66,7 +62,7 @@ func TestInsert(t *testing.T) {
 	printAll()
 	Insert(info, value.Int{Val: 600}, Position{7, 8})
 	printAll()
-	Insert(info, value.Int{Val: 700}, Position{9, 10})
+	Insert(info, value.Int{Val: 700}, Position{9, 10}) // Split leaf
 	printAll()
 	Insert(info, value.Int{Val: 800}, Position{11, 12})
 	printAll()
@@ -82,11 +78,17 @@ func TestInsert(t *testing.T) {
 	printAll()
 	Insert(info, value.Int{Val: 2500}, Position{23, 24})
 	printAll()
-	Insert(info, value.Int{Val: 3400}, Position{25, 26})
+	Insert(info, value.Int{Val: 3400}, Position{25, 26}) // Split non-leaf
 	printAll()
 	Insert(info, value.Int{Val: 1750}, Position{27, 28})
 	printAll()
 	BufferManager.BlockFlushAll()
-	// Insert(info, "Jane", Position{3, 4})
-	// Insert(info, "Mike", Position{5, 6})
+}
+
+func TestInsertScale(t *testing.T) {
+	initTest()
+	for i := 1; i <= 1000000; i++ {
+		Insert(info, value.Int{Val: int64(i)}, Position{uint16(i), uint16(i + 1)})
+	}
+	BufferManager.BlockFlushAll()
 }
