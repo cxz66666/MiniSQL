@@ -140,27 +140,15 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 	key_length := info.Attr_length
 
 	cur_node, cur_node_block := getBpNode(filename, 0, key_length)
-	var i uint16
 	if compare_type == value.Equal || compare_type == value.GreatEqual || compare_type == value.Great {
-		// Find the first node that is great or equal to the node
-		for {
+		var i uint16
+		// Find the first leaf that contains the key
+		for cur_node.isLeaf() == 0 {
 			n := cur_node.getSize()
-			var cur_compare_type value.CompareType
-			var cur_n uint16
-			if cur_node.isLeaf() == 1 {
-				cur_compare_type = value.GreatEqual
-				cur_n = n
-			} else {
-				cur_compare_type = compare_type
-				cur_n = n - 1
-			}
-			for i = 0; i <= cur_n; i++ {
-				if res, _ := key_value.Compare(cur_node.getKey(i, info.Attr_type), cur_compare_type); res {
+			for i = 0; i < n; i++ {
+				if res, _ := cur_node.getKey(i, info.Attr_type).Compare(key_value, value.Great); res {
 					break
 				}
-			}
-			if cur_node.isLeaf() == 1 {
-				break
 			}
 			next_node_id := cur_node.getPointer(i)
 			next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
@@ -169,7 +157,7 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 			cur_node_block = next_node_block
 		}
 	} else {
-		// Get the first node of all nodes
+		// Get the first leaf of all leaves
 		for cur_node.isLeaf() == 0 {
 			next_node_id := cur_node.getPointer(0)
 			next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
@@ -177,27 +165,48 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 			cur_node = next_node
 			cur_node_block = next_node_block
 		}
-		i = 0
 	}
 
 	dummy_head := new(ResultNode)
 	cur_result_node := dummy_head
 
-	for {
-		failed := false
-		n := cur_node.getSize()
-		if i > n { // Switch to the next node
-			next_node_id := cur_node.getNext()
-			next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
-			cur_node_block.FinishRead()
-			cur_node = next_node
-			cur_node_block = next_node_block
-			i = 0
-		}
+	var i uint16 = 0
+	begin := false
 
-		for j := i; j <= n; j++ {
-			if res, _ := key_value.Compare(cur_node.getKey(j, info.Attr_type), compare_type); !res {
-				failed = true
+	// Find the first node that satisfy the condition
+	for {
+		n := cur_node.getSize()
+		for j := uint16(0); j < n; j++ {
+			if res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value, compare_type); res {
+				begin = true
+				i = j
+				break
+			}
+		}
+		if begin {
+			break
+		}
+		// Switch to the next node
+		next_node_id := cur_node.getNext()
+		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
+		cur_node_block.FinishRead()
+		cur_node = next_node
+		cur_node_block = next_node_block
+		if cur_node.isLeaf() == 0 {
+			// Search to the end
+			break
+		}
+	}
+	if !begin {
+		return nil, nil
+	}
+
+	end := false
+	for {
+		n := cur_node.getSize()
+		for j := i; j < n; j++ {
+			if res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value, compare_type); !res {
+				end = true
 				break
 			}
 			new_result_node := new(ResultNode)
@@ -208,7 +217,18 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 			cur_result_node.next_node = new_result_node
 			cur_result_node = new_result_node
 		}
-		if failed {
+		if end {
+			break
+		}
+		// Switch to the next node
+		next_node_id := cur_node.getNext()
+		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
+		cur_node_block.FinishRead()
+		cur_node = next_node
+		cur_node_block = next_node_block
+		i = 0
+		if cur_node.isLeaf() == 0 {
+			// Search to the end
 			break
 		}
 	}

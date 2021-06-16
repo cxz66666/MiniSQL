@@ -97,9 +97,6 @@ func TestInsertScale(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	initTest()
-	for i := 100000; i >= 1; i-- {
-		Insert(info, value.Int{Val: int64(i)}, Position{uint16(2*i - 1), uint16(2 * i)})
-	}
 	var arr [100000]int
 	for i := range arr {
 		arr[i] = i
@@ -107,7 +104,26 @@ func TestDelete(t *testing.T) {
 	slice := arr[:]
 	shuffle(slice)
 	for i := 0; i < 100000; i++ {
+		Insert(info, value.Int{Val: int64(slice[i])}, Position{uint16(2*i - 1), uint16(2 * i)})
+	}
+	shuffle(slice)
+	for i := 0; i < 100000; i++ {
 		Delete(info, value.Int{Val: int64(slice[i])})
+	}
+	printAll()
+}
+
+func TestSearch(t *testing.T) {
+	initTest()
+	for i := 1; i <= 12; i++ {
+		Insert(info, value.Int{Val: int64(i)}, Position{uint16(2*i - 1), uint16(2 * i)})
+	}
+	Delete(info, value.Int{Val: 5})
+	printAll()
+	header, _ := GetFirst(info, value.Int{Val: 5}, value.LessEqual)
+	for header != nil {
+		fmt.Println(header.Pos)
+		header = header.GetNext()
 	}
 }
 

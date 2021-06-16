@@ -21,6 +21,7 @@ func (node bpNode) print(value_type value.ValueType) {
 		for i := uint16(0); i < n; i++ {
 			fmt.Println("Key: " + fmt.Sprint(node.getKey(i, value_type)) + ", Pointer: " + fmt.Sprint(node.getFilePointer(i)))
 		}
+		fmt.Println("Next: ", node.getNext())
 	}
 	fmt.Println()
 }
@@ -28,6 +29,7 @@ func (node bpNode) print(value_type value.ValueType) {
 func (node bpNode) nodeInit() {
 	node.setSize(0)
 	node.setLeaf(1)
+	node.setNext(0)
 }
 
 func getBpNode(filename string, block_id uint16, key_length uint16) (node bpNode, block *BufferManager.Block) {
@@ -43,7 +45,7 @@ func getBpNode(filename string, block_id uint16, key_length uint16) (node bpNode
 // Order is supposed to be the maximum *odd* number that
 // the block is capable of storing that many keys
 func getOrder(key_length uint16) uint16 {
-	var order uint16 = (BufferManager.BlockSize-7)/(key_length+4) - 1
+	var order uint16 = (BufferManager.BlockSize-5)/(key_length+4) - 1
 	if (order & 1) == 0 {
 		order--
 	}
@@ -305,6 +307,7 @@ func (parent bpNode) splitNode(info IndexInfo, k uint16) {
 		new_node.setSize((M + 1) / 2)
 		evil_node.setSize((M + 1) / 2)
 		new_node.setNext(evil_node.getNext())
+		evil_node.setNext(new_node_id)
 		copyKey(parent, k, evil_node, (M+1)/2)
 	} else {
 		new_node.setSize((M - 1) / 2)
