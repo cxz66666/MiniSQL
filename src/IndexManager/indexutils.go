@@ -82,6 +82,14 @@ func (node bpNode) isFull(M uint16) bool {
 	}
 }
 
+func (node bpNode) isDanger(M uint16) bool {
+	if node.isLeaf() == 1 {
+		return node.getSize() == (M+1)/2
+	} else {
+		return node.getSize() == (M-1)/2
+	}
+}
+
 // Get the start of the P[k]
 func (node bpNode) getPointerPosition(k uint16) uint16 {
 	var offset uint16
@@ -199,12 +207,11 @@ func (node bpNode) setKey(k uint16, value_type value.ValueType, key_value value.
 }
 
 // Get the end of a node
-
 func (node bpNode) getEnd() uint16 {
 	if node.isLeaf() == 1 {
-		return node.getKeyPosition(node.getSize()) + node.key_length
+		return node.getPointerPosition(node.getSize())
 	} else {
-		return node.getPointerPosition(node.getSize()) + 2
+		return node.getKeyPosition(node.getSize())
 	}
 }
 
@@ -336,10 +343,14 @@ func (parent bpNode) mergeNode(info IndexInfo, k uint16) {
 	if evil_node.isLeaf() == 0 {
 		copyKey(evil_node, evil_node_size, parent, k)
 		evil_node_end += key_length
+		evil_node.setSize(evil_node_size + evil_sib_size + 1) // trouble
+	} else {
+		evil_node.setSize(evil_node_size + evil_sib_size)
 	}
 	copy(evil_node.data[evil_node_end:], evil_sib.data[evil_sib_begin:])
 	parent.shrinkSpace(k)
-	evil_node.setSize(evil_node_size + evil_sib_size)
+	parent.setPointer(k, evil_node_id)
+	parent.setSize(parent.getSize() - 1)
 }
 
 // Move the first node of (k + 1) th child to k-th node
@@ -407,22 +418,26 @@ func (parent bpNode) forwardNode(info IndexInfo, k uint16) {
 func (parent bpNode) saveNode(info IndexInfo, k uint16) {
 	filename := info.getFileName()
 	key_length := parent.key_length
+	M := getOrder(key_length)
+
 	if k == parent.getSize() { // if this is the last node
-		prev_node, _ := getBpNode(filename, parent.getPointer(k-1), key_length)
-		if prev_node.getSize() > (getOrder(key_length)-1)/2 {
-			parent.forwardNode(info, k-1)
-		} else {
+		prev_node, prev_node_block := getBpNode(filename, parent.getPointer(k-1), key_length)
+		if prev_node.isDanger(M) {
+			prev_node_block.FinishRead()
 			parent.mergeNode(info, k-1)
-		}
-	} else if k > 0 {
-		next_node, _ := getBpNode(filename, parent.getPointer(k+1), key_length)
-		if next_node.getSize() > (getOrder(key_length)-1)/2 {
-			parent.moveNode(info, k)
 		} else {
-			parent.mergeNode(info, k)
+			prev_node_block.FinishRead()
+			parent.forwardNode(info, k-1)
 		}
 	} else {
-		panic("WTF, a node with one child is being saved")
+		next_node, next_node_block := getBpNode(filename, parent.getPointer(k+1), key_length)
+		if next_node.isDanger(M) {
+			next_node_block.FinishRead()
+			parent.mergeNode(info, k)
+		} else {
+			next_node_block.FinishRead()
+			parent.moveNode(info, k)
+		}
 	}
 }
 
@@ -458,7 +473,7 @@ func handleRootSingle(info IndexInfo) {
 
 	root, root_block := getBpNode(filename, 0, key_length)
 	defer root_block.FinishRead()
-	if root.isLeaf() == 0 && root.getSize() == 1 { // Single root
+	if root.isLeaf() == 0 && root.getSize() == 0 { // Single root
 		root_block.SetDirty()
 		child, child_block := getBpNode(filename, root.getPointer(0), key_length)
 		copy(root.data, child.data)

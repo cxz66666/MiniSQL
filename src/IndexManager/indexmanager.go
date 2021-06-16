@@ -81,7 +81,7 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 	return nil
 }
 
-func Delete(info IndexInfo, key_value value.Value, pos Position) error {
+func Delete(info IndexInfo, key_value value.Value) error {
 	filename := info.getFileName()
 	key_length := info.Attr_length
 
@@ -99,7 +99,7 @@ func Delete(info IndexInfo, key_value value.Value, pos Position) error {
 		}
 		next_node_id := cur_node.getPointer(i)
 		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
-		if next_node.getSize() == (M-1)/2 { // If it is in danger of lack of node
+		if next_node.isDanger(M) { // If it is in danger of lack of node
 			next_node_block.FinishRead()
 			cur_node_block.SetDirty()
 			cur_node.saveNode(info, i)
@@ -112,13 +112,14 @@ func Delete(info IndexInfo, key_value value.Value, pos Position) error {
 	// Search in the leaf
 	n := cur_node.getSize()
 	var i uint16
-	for i = 0; i <= n; i++ {
+	for i = 0; i < n; i++ {
 		if res, _ := key_value.Compare(cur_node.getKey(i, info.Attr_type), value.Equal); res {
 			break
 		}
 	}
 	if i <= n {
 		cur_node.shrinkSpace(i)
+		cur_node.setSize(cur_node.getSize() - 1)
 	}
 	cur_node_block.FinishRead()
 	handleRootSingle(info)
