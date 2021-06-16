@@ -139,3 +139,13 @@ func shuffle(arr []int) {
 		arr[j] = temp
 	}
 }
+
+func TestSplit(t *testing.T) {
+	BufferManager.InitBuffer()
+	os.Create("../BufferManager/student_name.index")
+	filename := info.getFileName()
+	node_id, _ := BufferManager.NewBlock(filename)
+	node, _ := getBpNode(filename, node_id, info.Attr_length)
+	node.nodeInit()
+	node.print()
+}

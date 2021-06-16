@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"minisql/src/Interpreter/lexer"
 	"regexp"
 	"strconv"
@@ -16,6 +15,7 @@ const (
 	ANGLE_LEFT_TOKEN        = int('<')
 	ANGLE_RIGHT_TOKEN       = int('>')
 	ASTERISK_TOKEN          = int('*')
+	POINT_TOKEN				= int('.')
 )
 
 var keywords = map[string]int{
@@ -122,7 +122,8 @@ var keywords = map[string]int{
 	"limit":LIMIT,
 	"OFFSET":OFFSET,
 	"offset":OFFSET,
-
+	"execfile":EXECFILE,
+	"EXECFILE":EXECFILE,
 
 }
 
@@ -138,6 +139,7 @@ var symbols = map[string]int{
 	"<>":NE,
 	"<=":LE,
 	">=":GE,
+	".":POINT_TOKEN,
 }
 
 var (
@@ -188,8 +190,8 @@ func (kt *keywordTokenizer) FromStrLit(lit string,TokenType lexer.Token, lastTok
 			}
 		}
 	case lexer.FLOAT:
-		if i, err := strconv.ParseFloat(lit, 0); err == nil {
-			fmt.Println(i)
+		if _, err := strconv.ParseFloat(lit, 0); err == nil {
+			//fmt.Println(i)
 			tokVal = float_value
 		}
 	case lexer.STRING:

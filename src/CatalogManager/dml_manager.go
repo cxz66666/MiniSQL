@@ -6,7 +6,7 @@ import (
 	"minisql/src/Interpreter/types"
 	"minisql/src/Interpreter/value"
 )
-//TODO NULL CHECK, if a value is null, now we can't check it!
+//Already do NULL CHECK, if a value is null, I will check it and throw a error !
 func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 	var table *TableCatalog
 
@@ -21,11 +21,12 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 	var startBytePos []int
 
 	if len(statement.ColumnNames)==0 { //insert all
-		columnPositions=make([]int,len(statement.Values))
-		startBytePos=make([]int,len(statement.Values))
+
 		if len(statement.Values)!=len(table.ColumnsMap) {
 			return errors.New("input numbers don't fit the column type"),nil,nil
 		}
+		columnPositions=make([]int,len(statement.Values))
+		startBytePos=make([]int,len(statement.Values))
 		valueNumber:= len(statement.Values)
 		for _,column:=range table.ColumnsMap {
 			pos:=column.ColumnPos
@@ -52,6 +53,21 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 			}
 			columnPositions=append(columnPositions,col.ColumnPos)
 			startBytePos=append(startBytePos,col.StartBytesPos)
+		}
+		for index,col:=range table.ColumnsMap{
+			if !col.NotNull {
+				continue
+			}
+			flag:=0
+			for _,colName:=range statement.ColumnNames {
+				if colName==index {
+					flag=1
+					break
+				}
+			}
+			if flag==0 {
+				return errors.New(fmt.Sprintf("column %s is a not null type, please input a value for it",index)),nil,nil
+			}
 		}
 	}
 	return nil,columnPositions,startBytePos

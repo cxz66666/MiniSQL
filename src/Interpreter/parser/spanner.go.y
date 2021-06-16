@@ -47,9 +47,9 @@ import (
 %token<str> MAX UNIQUE
 %token<str> ADD COLUMN SET
 %token<str> TRUE FALSE allow_commit_timestamp
-%token<empty> '(' ',' ')' ';' '*'
+%token<empty> '(' ',' ')' ';' '*' '.'
 %left <str> '='  '<' '>' LE GE NE
-%token<str> CREATE  DROP
+%token<str> CREATE  DROP EXECFILE
 %token<str> USE DATABASE TABLE INDEX STORING
 %token<str> SELECT WHERE FROM LIMIT OFFSET VALUES
 %token<str> INSERT INTO UPDATE DELETE
@@ -116,13 +116,30 @@ statement:
   | insert_stmt ';'
   | update_stmt ';'
   | delete_stmt ';'
+  | execfile_stmt ';'
+
+execfile_stmt:
+   EXECFILE IDENT_ALL
+   {
+     s := types.ExecFileStatement{
+           FileName: $2,
+     }
+     yylex.(*lexerWrapper).channelSend <- s
+   }
+   |  EXECFILE IDENT_ALL '.' IDENT_ALL {
+      s := types.ExecFileStatement{
+              FileName: $2+"."+$4,
+        }
+        yylex.(*lexerWrapper).channelSend <- s
+   }
+
 create_database:
   CREATE DATABASE database_id
   {
     s := types.CreateDatabaseStatement{
       DatabaseId: $3,
     }
-    yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
   }
 use_database:
   USE DATABASE database_id
@@ -130,7 +147,7 @@ use_database:
     s:=types.UseDatabaseStatement{
       DatabaseId: $3,
     }
-    yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
   }
 create_table:
   CREATE TABLE table_name '(' column_def_list ',' primary_key ')'  cluster_opt
@@ -140,13 +157,14 @@ create_table:
       item.ColumnPos=index
       tmpmap[item.Name]=item
     }
+
     s := types.CreateTableStatement{
       TableName:   $3,
       ColumnsMap:  tmpmap   ,
       PrimaryKeys: $7,
       Cluster:     $9,
     }
-    yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
   }
   | CREATE TABLE table_name '(' column_def_list  ')'  cluster_opt
       {
@@ -160,7 +178,7 @@ create_table:
           ColumnsMap:  tmpmap   ,
           Cluster:     $7,
         }
-        yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
       }
 
 column_def_list:
@@ -336,7 +354,7 @@ create_index:
       StoringClause: $10,
       Interleaves:   $11,
     }
-    yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
   }
 
 unique_opt:
@@ -404,7 +422,7 @@ interleave_clause:
     s := types.DropDatabaseStatement{
       DatabaseId: $3,
     }
-    yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
   }
 
 drop_table:
@@ -413,7 +431,7 @@ drop_table:
     s := types.DropTableStatement{
       TableName: $3,
     }
-    yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
   }
 
 drop_index:
@@ -423,7 +441,7 @@ drop_index:
       TableName: $5,
       IndexName: $3,
     }
-    yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
   }
 
 insert_stmt:
@@ -434,7 +452,7 @@ insert_stmt:
       	ColumnNames: make([]string, 0, 0),
       	Values: $6,
       }
-      yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
     }
     | INSERT INTO table_name '(' column_name_list ')' VALUES '(' value_list ')'
     {
@@ -443,7 +461,7 @@ insert_stmt:
       	ColumnNames: $5,
       	Values: $9,
       }
-      yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
     }
 update_stmt:
     UPDATE table_name SET  set_opt_list  where_opt
@@ -453,7 +471,7 @@ update_stmt:
       	SetExpr: $4,
       	Where: $5,
       }
-      yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
     }
 set_opt_list:
   set_opt
@@ -480,7 +498,7 @@ delete_stmt:
       	TableName: $3,
       	Where: $4,
       }
-      yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
     }
 select_stmt:
     SELECT sel_field_list FROM table_name_list where_opt limit_opt
@@ -491,7 +509,7 @@ select_stmt:
       	Where: $5,
       	Limit: $6,
       }
-      yylex.(*lexerWrapper).result = append(yylex.(*lexerWrapper).result, s)
+     yylex.(*lexerWrapper).channelSend <- s
     }
 sel_field_list:
    '*'
