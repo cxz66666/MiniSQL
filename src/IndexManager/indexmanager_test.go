@@ -99,10 +99,9 @@ func TestDelete(t *testing.T) {
 		Insert(info, value.Int{Val: int64(2 * i)}, Position{uint16(2*i - 1), uint16(2 * i)})
 	}
 	printAll()
-	Delete(info, value.Int{Val: 18})
-	Delete(info, value.Int{Val: 10})
-	// for i := 1; i <= 12; i++ {
-	// 	Delete(info, value.Int{Val: int64(i)})
-	// }
+	for i := 12; i >= 1; i-- {
+		Delete(info, value.Int{Val: int64(2 * i)})
+		printAll()
+	}
 	printAll()
 }
