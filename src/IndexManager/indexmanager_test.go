@@ -2,10 +2,12 @@ package IndexManager
 
 import (
 	"fmt"
+	"math/rand"
 	"minisql/src/BufferManager"
 	"minisql/src/Interpreter/value"
 	"os"
 	"testing"
+	"time"
 )
 
 var info IndexInfo = IndexInfo{
@@ -95,13 +97,29 @@ func TestInsertScale(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	initTest()
-	for i := 12; i >= 1; i-- {
-		Insert(info, value.Int{Val: int64(2 * i)}, Position{uint16(2*i - 1), uint16(2 * i)})
+	for i := 100000; i >= 1; i-- {
+		Insert(info, value.Int{Val: int64(i)}, Position{uint16(2*i - 1), uint16(2 * i)})
 	}
-	printAll()
-	for i := 12; i >= 1; i-- {
-		Delete(info, value.Int{Val: int64(2 * i)})
-		printAll()
+	var arr [100000]int
+	for i := range arr {
+		arr[i] = i
 	}
-	printAll()
+	slice := arr[:]
+	shuffle(slice)
+	for i := 0; i < 100000; i++ {
+		Delete(info, value.Int{Val: int64(slice[i])})
+	}
+}
+
+// 洗牌算法
+func shuffle(arr []int) {
+	rand.Seed(time.Now().UnixNano())
+	var i, j int
+	var temp int
+	for i = len(arr) - 1; i > 0; i-- {
+		j = rand.Intn(i)
+		temp = arr[i]
+		arr[i] = arr[j]
+		arr[j] = temp
+	}
 }
