@@ -238,7 +238,7 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 
 // pos_in_record 索引字段在 record 中的 offset，单位为 byte
 // record_length record 的长度，单位为 byte
-func Create(info IndexInfo, pos_in_record int, record_length int) error {
+func Create(info IndexInfo) error {
 	// Create file
 	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
 	if _, err := os.Create(filename); err != nil {
