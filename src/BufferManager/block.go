@@ -6,25 +6,27 @@ import (
 	"sync"
 )
 
+// Block 为缓冲区的块，只对外保留Data切片
 type Block struct {
 	filename string
 	blockid  uint16
 	dirty    bool
 	pin      bool
 	Data     []byte
-	next     *Block
-	prev     *Block
+	next     *Block  //后继
+	prev     *Block  //前驱
 	mutex    sync.Mutex
 }
 
+//脏了
 func (b *Block)SetDirty() {
 	b.dirty =true
 }
-
+//pin住留在缓冲区内
 func (b *Block)PinBlock()  {
 	b.pin=true
 }
-
+//解pin
 func (b *Block)UnPinBlock()  {
 	b.pin=false
 }

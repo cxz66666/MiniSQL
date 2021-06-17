@@ -92,7 +92,12 @@ func UseDatabase(databaseId string) error  {
 	}
 	return nil
 }
-
+func DropDatabaseCheck(databaseId string)error  {
+	if !ExistDatabase(databaseId) {
+		return errors.New("Drop table "+databaseId+" doesn't exist")
+	}
+	return nil
+}
 func DropDatabase(databaseId string) error  {
 	if !ExistDatabase(databaseId) {
 		return errors.New("Drop table "+databaseId+" doesn't exist")

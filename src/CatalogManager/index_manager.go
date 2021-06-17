@@ -44,3 +44,19 @@ func DropIndexCheck(statement types.DropIndexStatement)  error  {
 	}
 	return errors.New("don't find the index named "+statement.IndexName)
 }
+
+func DropIndex(statement types.DropIndexStatement) error {
+	err:=DropIndexCheck(statement)
+	if err!=nil {
+		return err
+	}
+	table:=TableName2CatalogMap[statement.TableName];
+	newIndex:=make([]IndexCatalog,0,len(table.Indexs))
+	for _,v:=range table.Indexs {
+		if v.IndexName!=statement.IndexName {
+			newIndex=append(newIndex,v)
+		}
+	}
+	table.Indexs=newIndex
+	return nil
+}

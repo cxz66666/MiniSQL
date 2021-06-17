@@ -14,6 +14,10 @@ import (
 	"sync"
 )
 
+
+//HandleOneParse 用来处理parse处理完的DStatement类型  dataChannel是接收Statement的通道,整个mysql运行过程中不会关闭，但是quit后就会关闭
+//stopChannel 用来发送同步信号，每次处理完一个后就发送一个信号用来同步两协程，主协程需要接收到stopChannel的发送后才能继续下一条指令，当dataChannel
+//关闭后，stopChannel才会关闭
 func HandleOneParse( dataChannel <-chan types.DStatements,stopChannel chan<- struct{})   {
 	var err error
 	for statement:=range dataChannel {
@@ -50,20 +54,28 @@ func HandleOneParse( dataChannel <-chan types.DStatements,stopChannel chan<- str
 	fmt.Println(err)
 	close(stopChannel)
 }
-
+//  CreateDatabaseAPI 只调用CM，和IM、RM无关
 func CreateDatabaseAPI(statement types.CreateDatabaseStatement)  error {
 	return CatalogManager.CreateDatabase(statement.DatabaseId)
 }
-
+//  UseDatabaseAPI 只调用CM，和IM、RM无关
 func UseDatabaseAPI(statement types.UseDatabaseStatement) error  {
 	return CatalogManager.UseDatabase(statement.DatabaseId)
 }
-
+//  DropDatabaseAPI  先CM的check，和IM、RM无关 ，再调用RM的drop ， 再在CM中删除并flush
 func DropDatabaseAPI(statement types.DropDatabaseStatement) error  {
+	err:= CatalogManager.DropDatabaseCheck(statement.DatabaseId)
+	if err!=nil {
+		return err
+	}
+	err=RecordManager.DropDatabase(statement.DatabaseId)
+	if err!=nil {
+		return err
+	}
 	return CatalogManager.DropDatabase(statement.DatabaseId)
 }
 
-
+// CreateTableAPI CM进行检查，index检查 语法检查  之后调用RM中的CreateTable创建表， 之后使用RM中的CreateIndex建索引
 func CreateTableAPI(statement types.CreateTableStatement) error {
 	err,indexs:= CatalogManager.CreateTableCheck(statement)
 	if err!=nil {
@@ -82,7 +94,7 @@ func CreateTableAPI(statement types.CreateTableStatement) error {
 	return nil
 }
 
-
+// CreateIndexAPI CM进行检查，index语法检查 之后使用RM中的CreateIndex建索引
 func CreateIndexAPI(statement types.CreateIndexStatement) error  {
 	err,indexCatalog:=CatalogManager.CreateIndexCheck(statement)
 	if err!=nil {
@@ -91,20 +103,29 @@ func CreateIndexAPI(statement types.CreateIndexStatement) error  {
 	return RecordManager.CreateIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableName),*indexCatalog)
 }
 
+// DropTableAPI CM进行检查，注意这个时候并不真正删除CM中的记录， 之后RM的DropTable删除table文件以及index文件， 之后让CM删除map中的记录同时flush
 func DropTableAPI(statement types.DropTableStatement) error  {
 	err:=CatalogManager.DropTableCheck(statement)
 	if err!=nil{
 		return err
 	}
-	return RecordManager.DropTable(statement.TableName)
+	err= RecordManager.DropTable(statement.TableName)
+	if err!=nil {
+		return err
+	}
+	return CatalogManager.DropTable(statement)
 }
-
+// DropIndexAPI CM进行检查， RM中删除index 之后CM中再删除并flush
 func DropIndexAPI(statement types.DropIndexStatement) error  {
 	err:=CatalogManager.DropIndexCheck(statement)
 	if err!=nil{
 		return err
 	}
-	return RecordManager.DropIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableName),statement.IndexName)
+	err= RecordManager.DropIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableName),statement.IndexName)
+	if err!=nil {
+		return err
+	}
+	return CatalogManager.DropIndex(statement)
 }
 
 
@@ -173,10 +194,11 @@ func SelectAPI(statement types.SelectStatement) error  {
 	}
 	return nil
 }
-
+// ExecFileAPI 执行某文件  开辟两个新协程
 func ExecFileAPI(statement types.ExecFileStatement) error  {
-	StatementChannel:=make(chan types.DStatements,100)
-	FinishChannel:=make(chan struct{},100)
+	//parse协程 有缓冲信道
+	StatementChannel:=make(chan types.DStatements,500)
+	FinishChannel:=make(chan struct{},500)
 	if !Utils.Exists(statement.FileName) {
 		return errors.New("file "+statement.FileName+" don't exist")
 	}
@@ -186,7 +208,7 @@ func ExecFileAPI(statement types.ExecFileStatement) error  {
 		return errors.New("open file "+statement.FileName+" fail")
 	}
 	var wg sync.WaitGroup
-	wg.Add(1)
+	wg.Add(1)  //等待FinishChannel关闭
 
 	go HandleOneParse(StatementChannel,FinishChannel)  //begin the runtime for exec
 	go func() {
@@ -195,9 +217,9 @@ func ExecFileAPI(statement types.ExecFileStatement) error  {
 
 		}
 	}()
-	err=parser.Parse(reader,StatementChannel)
+	err=parser.Parse(reader,StatementChannel) //开始解析
 
-	close(StatementChannel)
+	close(StatementChannel) //关闭StatementChannel，进而关闭FinishChannel
 
 	wg.Wait()
 

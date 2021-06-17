@@ -8,7 +8,11 @@ import (
 
 
 //以下操作均保证操作数据的名称、类型准确无误
-
+//删除所有以databseId开头的table文件（虽然不优雅，但是这样最简单
+func DropDatabase(databaseId string) error  {
+	//TODO
+	return nil
+}
 //CreateTable 拿到table的名字，同时通过cm获取当前正在使用的数据库名字，创建一个自己能找到的存记录的文件
 func CreateTable(tableName string) error  {
 	//TODO
