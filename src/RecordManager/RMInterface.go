@@ -13,13 +13,19 @@ import (
 )
 
 type dataPosition = IndexManager.Position
-freeList := list.New()
+var freeList list.List
+
+func loadFreeList() error {
+
+	//freeList = list.New()
+	return nil
+}
 
 //以下操作均保证操作数据的名称、类型准确无误
 //删除所有以databseId开头的table文件（虽然不优雅，但是这样最简单
 func DropDatabase(databaseId string) error  {
 	//删除table数据文件
-	if err := Utils.RemoveAll(CatalogManager.FolderPosition + CatalogManager.DatabaseNamePrefix + CatalogManager.UsingDatabase); err != nil {
+	if err := Utils.RemoveAll(CatalogManager.FolderPosition + CatalogManager.DatabaseNamePrefix + CatalogManager.UsingDatabase.DatabaseId); err != nil {
 		return err
 	}
 
@@ -81,15 +87,14 @@ func DropTable(tableName string) error  {
 
 //CreateIndex  传入cm中table的引用，以及index的各种属性（名称 ，unique ，key数组目前只考虑一个key，是指在哪些column上），创建完成后记得在cm的table插入索引，直接一个append newIndex到table的index数组内
 func CreateIndex(table *CatalogManager.TableCatalog, newIndex CatalogManager.IndexCatalog ) error {
-	table.Indexs.append(newIndex)
+	table.Indexs = append(table.Indexs, newIndex)
 
-	indexColumn := table.ColumnsMap[newIndex.Keys[0].name]
+	indexColumn := table.ColumnsMap[newIndex.Keys[0].Name]
 	indexinfo := IndexManager.IndexInfo {
 		Table_name: table.TableName,
 		Attr_name: indexColumn.Name,
-		Attr_type: indexColumn.Type.Length.TypeTag,
-		Attr_length: indexColumn.Type.Length,
-	}
+		Attr_type: indexColumn.Type.TypeTag,
+		Attr_length: uint16(indexColumn.Type.Length)}
 	if err := IndexManager.Create(indexinfo); err != nil {
 		return err
 	}
@@ -103,15 +108,13 @@ func DropIndex(table *CatalogManager.TableCatalog,indexName string) error  {
 	indexinfo := IndexManager.IndexInfo {
 		Table_name: table.TableName,
 		Attr_name: indexColumn.Name,
-		Attr_type: indexColumn.Type.Length.TypeTag,
-		Attr_length: indexColumn.Type.Length,
-	}
+		Attr_type: indexColumn.Type.TypeTag,
+		Attr_length: uint16(indexColumn.Type.Length)}
 	for i, index := range table.Indexs {
 		if index.IndexName == indexName {
 			table.Indexs[i]= table.Indexs[len(table.Indexs) - 1]
-			table = table[:len(table.Indexs) - 1]
-			break
-		}
+			table.Indexs = table.Indexs[:len(table.Indexs) - 1]
+			break}
 	}
 	if err := IndexManager.Create(indexinfo); err != nil {
 		return err
@@ -123,22 +126,23 @@ func DropIndex(table *CatalogManager.TableCatalog,indexName string) error  {
 func InsertRecord(table *CatalogManager.TableCatalog,columnPos []int,startBytePos []int,values []value.Value) error {
 	//首先检查 unique限制
 
-	if len(freeList) == 0 {
-		if blockId, err := BufferManager.NewBlock(table.TableName); err != nil {
+	
+	if freeList.Len() == 0 {
+		blockId, err := BufferManager.NewBlock(table.TableName);
+		if  err != nil {
 			return err
 		}
-		for offset := 0; offset + table.RecordLength < buffer.BlockSize; offset += table.RecordLength {
+		for offset := 0; offset + table.RecordLength < BufferManager.BlockSize; offset += table.RecordLength {
 			freeList.PushBack(dataPosition {
-				block: blockId,
-				offset: offset
-			})
+				Block: blockId,
+				Offset: uint16(offset)})
 		}
 	}
 
 	posElement := freeList.Front()
 	freeList.Remove(posElement)
-	pos := posElement.Value
-
+	pos, _:= posElement.Value.(dataPosition)
+	//pos := dataPosition{}
 	if err := setRecord(table, pos, columnPos, startBytePos, values); err != nil {
 		return err
 	}
@@ -149,16 +153,15 @@ func InsertRecord(table *CatalogManager.TableCatalog,columnPos []int,startBytePo
 			Table_name : table.TableName,
 			Attr_name : index.Keys[0].Name,
 			Attr_type : table.ColumnsMap[index.Keys[0].Name].Type.TypeTag,
-			Attr_length : table.ColumnsMap[index.Keys[0].Name].Type.Length
-		}
+			Attr_length :uint16(table.ColumnsMap[index.Keys[0].Name].Type.Length)}
 		var val value.Value
 		for i, col := range(columnPos) {
-			if table.ColumnsMap[index.Keys[0].Name] == col {
+			if table.ColumnsMap[index.Keys[0].Name].ColumnPos == col {
 				val = values[i]
 				break
 			}
 		}
-		if err := Insert(indexinfo, val, pos); err != nil {
+		if err := IndexManager.Insert(indexinfo, val, pos); err != nil {
 			return err
 		}
 	}
@@ -174,22 +177,27 @@ func InsertRecord(table *CatalogManager.TableCatalog,columnPos []int,startBytePo
 //如果column为空，就认为是选择所有
 func SelectRecord(table *CatalogManager.TableCatalog,columns []string, where *types.Where) (error,[]value.Row) {
 	ret := []value.Row{}
-	for blockId := 0; blockId < BufferManager.GetBlockNumber(table.TableName); blockId++ {
-		for offset := 0; offset + table.RecordLength < buffer.BlockSize; offset += table.RecordLength {
-			if buffer.BlockSize / table.recordlength * blockId + offset > table.RecordTotal{
+	totalBlockNum, _ := BufferManager.GetBlockNumber(table.TableName)
+	for blockId := uint16(0); blockId < totalBlockNum; blockId++ {
+		for offset := uint16(0); offset + uint16(table.RecordLength) < BufferManager.BlockSize; offset += uint16(table.RecordLength) {
+			if BufferManager.BlockSize / uint16(table.RecordLength) * blockId + offset > uint16(table.RecordTotal){
 				break
 			}
-			valid, record, err := getRecord(table, dataPosition {block: blockId, offset: offset})
-			if !vaild {
+			flag, record, err := getRecord(table, dataPosition {Block: blockId, Offset: offset})
+			if flag == false {
 				continue
 			}
 			if err != nil {
-				return err
+				return err, nil
 			}
-			if !checkRow(table, record, where) {
+			if flag, err := checkRow(table, record, where); err != nil || flag == false {
+				if err != nil {
+					return err, nil
+				}
 				continue
 			}
-			ret.append(columnFilter(table, record, columns))
+			tmp, _ := columnFilter(table, record, columns)
+			ret = append(ret, tmp)
 		} 
 	}
 	
@@ -204,22 +212,28 @@ func SelectRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,w
 		Table_name : table.TableName,
 		Attr_name : index.Left,
 		Attr_type : table.ColumnsMap[index.Left].Type.TypeTag,
-		Attr_length : table.ColumnsMap[index.Left].Type.Length
-	}
+		Attr_length : uint16(table.ColumnsMap[index.Left].Type.Length)}
 
-	if retNode, err := IndexManager(indexinfo, index.Right, index.Operator); err != nil {
-		return err
+	retNode, err := IndexManager.GetFirst(indexinfo, index.Right, index.Operator);
+		if  err != nil {
+		return err,nil
 	}
 
 	for retNode != nil {
-		if record, err := getRecord(table, retNode.Pos); err != nil {
-			return err
+		flag, record, err := getRecord(table, retNode.Pos);
+		if flag == false {
+			retNode = retNode.GetNext()
+			continue
 		}
-		if ans, err := columnFilter(table, record , columns); err != nil {
-			return err
+		if  err != nil {
+			return err, nil
 		}
-		ret.append(ans)
-		retNode = retNode.next_node
+		ans, err := columnFilter(table, record , columns);
+		if  err != nil {
+			return err, nil
+		}
+		ret = append(ret, ans)
+		retNode = retNode.GetNext()
 	}
 	//where maybe nil!!!!
 	return nil, ret
@@ -227,24 +241,27 @@ func SelectRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,w
 
 //DeleteRecord 传入delete的表，where表达式,无索引  int返回删除了多少行
 func DeleteRecord(table *CatalogManager.TableCatalog,where *types.Where) (error,int) {
-	cnt := 0
-	for blockId := 0; blockId < BufferManager.GetBlockNumber(table.TableName); blockId++ {
-		for offset := 0; offset + table.RecordLength < buffer.BlockSize; offset += table.RecordLength {
+	var cnt int = 0
+	totalBlockNum, _ := BufferManager.GetBlockNumber(table.TableName)
+	for blockId := uint16(0); blockId < totalBlockNum; blockId++ {
+		for offset := uint16(0); offset + uint16(table.RecordLength) < BufferManager.BlockSize; offset += uint16(table.RecordLength) {
 			pos := dataPosition{
-				block : blockId,
-				offset : offset
-			}
-			if buffer.BlockSize / table.recordlength * blockId + offset > table.RecordTotal{
+				Block : blockId,
+				Offset : offset}
+			if  BufferManager.BlockSize / uint16(table.RecordLength) * blockId + offset > uint16(table.RecordTotal){
 				break
 			}
-			valid, record, err := getRecord(table, dataPosition {block: blockId, offset: offset})
-			if !vaild {
+			flag, record, err := getRecord(table, dataPosition {Block: blockId, Offset: offset})
+			if flag == false {
 				continue
 			}
 			if err != nil {
-				return err
+				return err, 0
 			}
-			if !checkRow(table, record, where) {
+			if flag, err := checkRow(table, record, where); flag == false || err != nil {
+				if err != nil {
+					return err, 0
+				}
 				continue
 			}
 
@@ -265,23 +282,28 @@ func DeleteRecordWithIndex(table *CatalogManager.TableCatalog,where *types.Where
 		Table_name : table.TableName,
 		Attr_name : index.Left,
 		Attr_type : table.ColumnsMap[index.Left].Type.TypeTag,
-		Attr_length : table.ColumnsMap[index.Left].Type.Length
-	}
-	cnt := 0 
-
-	if retNode, err := IndexManager(indexinfo, index.Right, index.Operator); err != nil {
-		return err
+		Attr_length : uint16(table.ColumnsMap[index.Left].Type.Length)}
+	var cnt int = 0 
+	retNode, err := IndexManager.GetFirst(indexinfo, index.Right, index.Operator);
+	if  err != nil {
+		return err, 0
 	}
 
 	for retNode != nil {
-		if record, err := getRecord(table, retNode.Pos); err != nil {
-			return err
+		flag, record, err := getRecord(table, retNode.Pos);
+		if(flag == false) {
+			retNode = retNode.GetNext()
+			continue
+		}
+		if  err != nil {	
+			return err, 0
 		}
 		if err := deleteRecord(table, retNode.Pos); err != nil {
-			return err
+			return err, 0
 		}
 		val := record.Values[table.ColumnsMap[index.Left].ColumnPos]
-		BufferManager.Delete(IndexInfo, val)
+		IndexManager.Delete(indexinfo, val)
+		retNode = retNode.GetNext()
 		cnt ++
 	}
 	//where maybe nil!!!!

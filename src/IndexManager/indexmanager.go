@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"minisql/src/Interpreter/value"
 	"os"
-	"filepath"
+	"path/filepath"
 )
 
 type bpNode struct {
@@ -14,8 +14,8 @@ type bpNode struct {
 
 // 块中的位置
 type Position struct {
-	block  uint16
-	offset uint16
+	Block  uint16
+	Offset uint16
 }
 
 /*
@@ -255,7 +255,7 @@ func Create(info IndexInfo) error {
 func Drop(info IndexInfo) error {
 	// Create file
 	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
-	if _, err := os.Remove(filename); err != nil {
+	if err := os.Remove(filename); err != nil {
 		fmt.Println(err)
 		return err
 	}
@@ -264,12 +264,14 @@ func Drop(info IndexInfo) error {
 
 //
 func DropAll(tableName string) error {
-	if files, err := filepath.Glob(tableName+"_*"); err != nil {
+	files, err := filepath.Glob(tableName+"_*");
+	if err != nil {
 		return err
 	}
-	for _, f := range files {
+	for _, f := range (files) {
 		if err := os.Remove(f); err != nil {
 			return err
 		}
 	}
+	return nil
 }

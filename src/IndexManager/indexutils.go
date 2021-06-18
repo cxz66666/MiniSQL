@@ -152,8 +152,8 @@ func (node bpNode) getFilePointer(k uint16) Position {
 	buf = bytes.NewBuffer(node.data[from:to])
 	binary.Read(buf, binary.LittleEndian, &offset)
 	return Position{
-		block:  block_id,
-		offset: offset,
+		Block:  block_id,
+		Offset: offset,
 	}
 }
 
@@ -162,14 +162,14 @@ func (node bpNode) setFilePointer(k uint16, pos Position) {
 	from := node.getPointerPosition(k)
 	to := from + 2
 	buf := bytes.NewBuffer([]byte{})
-	binary.Write(buf, binary.LittleEndian, pos.block)
+	binary.Write(buf, binary.LittleEndian, pos.Block)
 	copy(node.data[from:to], buf.Bytes())
 
 	// Get Offset
 	from += 2
 	to += 2
 	buf = bytes.NewBuffer([]byte{})
-	binary.Write(buf, binary.LittleEndian, pos.offset)
+	binary.Write(buf, binary.LittleEndian, pos.Offset)
 	copy(node.data[from:to], buf.Bytes())
 
 }
