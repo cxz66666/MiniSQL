@@ -13,6 +13,7 @@
 
 # go package
 /pkg
+.vscode/
 
 # Test binary, built with `go test -c`
 *.test

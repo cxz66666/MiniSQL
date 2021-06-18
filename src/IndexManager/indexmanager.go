@@ -262,6 +262,7 @@ func Drop(info IndexInfo) error {
 	return nil
 }
 
+//
 func DropAll(tableName string) error {
 	if files, err := filepath.Glob(tableName+"_*"); err != nil {
 		return err

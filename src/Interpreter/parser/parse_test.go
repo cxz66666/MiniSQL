@@ -1,11 +1,5 @@
 package parser
 
-import (
-	"fmt"
-	"strings"
-	"testing"
-)
-
 var sql_strings=[]string{
 	"create table cxz(" +
 		"afsdfsad int unique," +
@@ -15,10 +9,3 @@ var sql_strings=[]string{
 		"select a,b,c,d,e,f,g from cxz where a=123 and b=456 or c=234;",
 }
 
-func BenchmarkParse(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-			result,err:=Parse(strings.NewReader(sql_strings[0]))
-			fmt.Println(result,err)
-
-	}
-}
