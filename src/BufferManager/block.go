@@ -15,7 +15,7 @@ type Block struct {
 	Data     []byte
 	next     *Block  //后继
 	prev     *Block  //前驱
-	mutex    sync.Mutex
+	    sync.Mutex
 }
 
 //脏了
@@ -32,7 +32,7 @@ func (b *Block)UnPinBlock()  {
 }
 //释放读锁，读完一块必须干此时，不然锁就无法释放
 func (b *Block)FinishRead()  {
-	b.mutex.Unlock()
+	b.Unlock()
 	return
 }
 

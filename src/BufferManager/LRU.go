@@ -1,6 +1,8 @@
 package BufferManager
 
-const InitSize = 1024
+import "sync"
+
+const InitSize = 2048
 
 type LRUList struct {
 	root Block  // dummy header
@@ -60,6 +62,7 @@ func (l *LRUList) appendToBack(e *Block) {
 type LRUCache struct {
 	Size     int
 	root     *LRUList
+	 sync.Mutex
 	blockMap map[int]*Block
 }
 
@@ -71,12 +74,13 @@ func NewLRUCache() *LRUCache {
 	return cache
 }
 
-func (cache *LRUCache) PutBlock(value *Block, index int) {
-	if _, ok := cache.blockMap[index]; ok {
+func (cache *LRUCache) PutBlock(value *Block, index int) *Block {
+	cache.Lock() //写锁
+	defer cache.Unlock()
+	if item, ok := cache.blockMap[index]; ok {
 		//fmt.Println(index)
-		cache.blockMap[index] = value
-		cache.root.moveToBack(value)
-		return
+		cache.root.moveToBack(item)
+		return item
 	}
 	//maybe it's wrong, I'm not sure
 	if len(cache.blockMap) >= cache.Size {
@@ -84,8 +88,8 @@ func (cache *LRUCache) PutBlock(value *Block, index int) {
 		if temp != nil {
 			for ; temp.pin; temp = temp.next {
 			}
-			temp.mutex.Lock()
-			defer temp.mutex.Unlock()
+			temp.Lock()
+			defer temp.Unlock()
 			temp.flush()
 			cache.root.remove(temp)
 			oldIndex := Query2Int(nameAndPos{fileName: temp.filename, blockId: temp.blockid})
@@ -97,10 +101,12 @@ func (cache *LRUCache) PutBlock(value *Block, index int) {
 
 	//fmt.Println(index)
 	cache.blockMap[index] = value
+	return  value
 }
 //GetBlock 获取buffer中的缓存，如果没找到就返回false
 func (cache *LRUCache) GetBlock(pos int) (bool, *Block) {
-
+	cache.Lock() //读锁
+	defer cache.Unlock()
 	if node, ok := cache.blockMap[pos]; ok {
 		cache.root.moveToBack(node)
 		return true, node

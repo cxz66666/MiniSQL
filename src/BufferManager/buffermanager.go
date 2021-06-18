@@ -2,6 +2,7 @@ package BufferManager
 
 import (
 	"os"
+	"sync"
 )
 
 const BlockSize = 4096 // for debug
@@ -10,6 +11,10 @@ var connector = "*"
 
 var posNum = 0
 var fileNamePos2Int map[nameAndPos]int
+
+
+var blockNumLock sync.Mutex   //没法用读写锁，必须用互斥锁
+var query2IntLock sync.Mutex    //struct 2 int 映射表
 
 type nameAndPos struct {
 	fileName string
@@ -28,7 +33,7 @@ func BlockRead(filename string, block_id uint16) (*Block, error) {
 	t := Query2Int(nameAndPos{fileName: filename, blockId: block_id})
 	ok, block := blockBuffer.GetBlock(t)
 	if ok {
-		block.mutex.Lock()
+		block.Lock()
 		return block, nil
 	}
 	newBlock := Block{
@@ -40,25 +45,24 @@ func BlockRead(filename string, block_id uint16) (*Block, error) {
 	if err != nil {
 		return nil, err
 	}
-	blockBuffer.PutBlock(&newBlock, t)
-	newBlock.mutex.Lock()
-	return &newBlock, nil
+	blockPtr:=blockBuffer.PutBlock(&newBlock, t)
+	blockPtr.Lock()
+	return blockPtr, nil
 }
 
 //GetBlockNumber 返回当前总共多少个块，一定是4KB的倍数
 func GetBlockNumber(fileName string) (uint16, error) {
-	fileInfo, err := os.Stat(fileName)
-	if err != nil {
-		return 0, err
-	}
-	//fmt.Println("size is ",fileInfo.Size())
-	tmp := fileInfo.Size() / BlockSize
-	return uint16(tmp), nil
+	blockNumLock.Lock()
+	defer blockNumLock.Unlock()
+	return findBlockNumber(fileName)
 }
 
 //NewBlock 返回的 block id 是指新的块在文件中的 block id
+//该函数是插入用的，已经支持并发操作
 func NewBlock(filename string) (uint16, error) {
-	block_id, err := GetBlockNumber(filename)
+	blockNumLock.Lock()
+	defer blockNumLock.Unlock()
+	block_id, err := findBlockNumber(filename)
 	if err != nil {
 		return 0, err
 	}
@@ -75,6 +79,8 @@ func NewBlock(filename string) (uint16, error) {
 }
 //BlockFlushAll 刷新所有块，一般不使用，该过程不拿锁，所以可能存在冲突！！
 func BlockFlushAll() (bool, error) {
+	blockBuffer.Lock()
+	defer blockBuffer.Unlock()
 	for _, item := range blockBuffer.blockMap {
 		if item.dirty {
 			err := item.flush()
@@ -88,10 +94,22 @@ func BlockFlushAll() (bool, error) {
 }
 //Query2Int 将filename和pos转为 buffer内部的int，如果不存在就创建
 func Query2Int(pos nameAndPos) int {
+	query2IntLock.Lock()
+	defer query2IntLock.Unlock()
 	if index, ok := fileNamePos2Int[pos]; ok {
 		return index
 	}
 	posNum++
 	fileNamePos2Int[pos] = posNum
 	return posNum
+}
+
+func findBlockNumber(fileName string) (uint16, error)  {
+	fileInfo, err := os.Stat(fileName)
+	if err != nil {
+		return 0, err
+	}
+	//fmt.Println("size is ",fileInfo.Size())
+	tmp := fileInfo.Size() / BlockSize
+	return uint16(tmp), nil
 }
