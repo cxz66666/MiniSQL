@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"minisql/src/Interpreter/value"
 	"os"
+	"filepath"
 )
 
 type bpNode struct {
@@ -238,6 +239,8 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 
 // pos_in_record 索引字段在 record 中的 offset，单位为 byte
 // record_length record 的长度，单位为 byte
+
+//新建 index
 func Create(info IndexInfo) error {
 	// Create file
 	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
@@ -246,4 +249,26 @@ func Create(info IndexInfo) error {
 		return err
 	}
 	return nil
+}
+
+//删除 index
+func Drop(info IndexInfo) error {
+	// Create file
+	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
+	if _, err := os.Remove(filename); err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return nil
+}
+
+func DropAll(tableName string) error {
+	if files, err := filepath.Glob(tableName+"_*"); err != nil {
+		return err
+	}
+	for _, f := range files {
+		if err := os.Remove(f); err != nil {
+			return err
+		}
+	}
 }

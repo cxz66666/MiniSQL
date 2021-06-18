@@ -1,9 +1,13 @@
 package RecordManager
 
 import (
+	"fmt"
+	"errors"
 	"minisql/src/CatalogManager"
 	"minisql/src/Interpreter/types"
 	"minisql/src/Interpreter/value"
+	//"minisql/src/IndexManager"
+	"minisql/src/Utils"
 )
 
 
@@ -11,27 +15,98 @@ import (
 
 //CreateTable 拿到table的名字，同时通过cm获取当前正在使用的数据库名字，创建一个自己能找到的存记录的文件
 func CreateTable(tableName string) error  {
-	//TODO
+	filePath := CatalogManager.FolderPosition + CatalogManager.DatabaseNamePrefix + CatalogManager.UsingDatabase.DatabaseId
+
+	//test use
+	filePath = filePath + "test/"
+	//must be delete
+
+	if !Utils.Exists(filePath) {
+		err := Utils.CreateDir(filePath)
+		if err != nil {
+			return errors.New("Can't create " + CatalogManager.UsingDatabase.DatabaseId + "'s folder")
+		}
+	}
+
+	filePath = filePath + tableName
+	fmt.Println(filePath)
+
+
+	
+	//当前数据库所在文件夹已经建立
+	if !Utils.Exists(filePath) {
+		f, err := Utils.CreateFile(filePath)
+		defer f.Close()
+
+		if err != nil {
+			return errors.New("Can't create " + tableName +"'s table file")
+		}
+	}else {
+		//需要保证此前没有过 create tableName 的操作，否则throw error
+		return errors.New(tableName+" 's table file already exist")
+	}
+
 	return nil
 }
 
 //DropTable 拿到table的名字，同时通过cm获取当前正在使用的数据库名字，将table和table上的索引文件全部删除，不要忘了索引
+//没管 tablecatalog
 func DropTable(tableName string) error  {
-	//TODO
+	if err := IndexManager.DropAll(tableName); err != nil {
+		return err
+	}
+
+	if err := Utils.RemoveAll(CatalogManager.FolderPosition + CatalogManager.DatabaseNamePrefix + CatalogManager.UsingDatabase.DatabaseId +
+					"/" + tableName); err != nil {
+		return err
+	}
 	return nil
 }
+
+
 //CreateIndex  传入cm中table的引用，以及index的各种属性（名称 ，unique ，key数组目前只考虑一个key，是指在哪些column上），创建完成后记得在cm的table插入索引，直接一个append newIndex到table的index数组内
 func CreateIndex(table *CatalogManager.TableCatalog, newIndex CatalogManager.IndexCatalog ) error {
-	//TODO
+	table.Indexs.append(newIndex)
+
+	indexColumn := table.ColumnsMap[newIndex.Keys[0].name]
+	indexinfo := IndexManager.IndexInfo {
+		Table_name: table.TableName,
+		Attr_name: indexColumn.Name,
+		Attr_type: indexColumn.Type.Length.TypeTag,
+		Attr_length: indexColumn.Type.Length,
+	}
+	if err := IndexManager.Create(indexinfo); err != nil {
+		return err
+	}
+	
 	return nil
 }
 //DropIndex 传入cm中table的引用，以及indexName，cm已经做过合法性校验，直接删除索引文件，同时table中的Index属性中删除该index
 func DropIndex(table *CatalogManager.TableCatalog,indexName string) error  {
-	//TODO
+	
+	indexColumn := table.ColumnsMap[indexName]
+	indexinfo := IndexManager.IndexInfo {
+		Table_name: table.TableName,
+		Attr_name: indexColumn.Name,
+		Attr_type: indexColumn.Type.Length.TypeTag,
+		Attr_length: indexColumn.Type.Length,
+	}
+	for i, index := range table.Indexs {
+		if index.IndexName == indexName {
+			table.Indexs[i]= table.Indexs[len(table.Indexs) - 1]
+			table = table[:len(table.Indexs) - 1]
+			break
+		}
+	}
+	if err := IndexManager.Create(indexinfo); err != nil {
+		return err
+	}
+	
 	return nil
 }
 //InsertRecord 传入cm中table的引用， columnPos传入插入哪些列，其值为column在table中的第几个   startBytePos 传入开始byte的集合，分别代表每个value代表的数据从哪个byte开始存（已经加上valid位和null位），values为value数组
 func InsertRecord(table *CatalogManager.TableCatalog,columnPos []int,startBytePos []int,values []value.Value) error {
+	
 	return nil
 }
 

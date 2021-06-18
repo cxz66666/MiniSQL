@@ -35,3 +35,6 @@ func CreateFile(fileName string)  (*os.File, error)  {
 func RemoveFile(fileName string)  error {
 	return os.Remove(fileName)
 }
+func RemoveAll(path string) error {
+	return os.RemoveAll(path)
+}
