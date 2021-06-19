@@ -1,15 +1,15 @@
 package RecordManager
 
 import (
-	"fmt"
+	"container/list"
 	"errors"
+	"fmt"
+	"minisql/src/BufferManager"
 	"minisql/src/CatalogManager"
+	"minisql/src/IndexManager"
 	"minisql/src/Interpreter/types"
 	"minisql/src/Interpreter/value"
-	"minisql/src/IndexManager"
 	"minisql/src/Utils"
-	"minisql/src/BufferManager"
-	"container/list"
 )
 
 type dataPosition = IndexManager.Position
@@ -177,6 +177,7 @@ func InsertRecord(table *CatalogManager.TableCatalog,columnPos []int,startBytePo
 //如果column为空，就认为是选择所有
 func SelectRecord(table *CatalogManager.TableCatalog,columns []string, where *types.Where) (error,[]value.Row) {
 	ret := []value.Row{}
+	colPos:=getColPos(table,where)
 	totalBlockNum, _ := BufferManager.GetBlockNumber(table.TableName)
 	for blockId := uint16(0); blockId < totalBlockNum; blockId++ {
 		for offset := uint16(0); offset + uint16(table.RecordLength) < BufferManager.BlockSize; offset += uint16(table.RecordLength) {
@@ -190,7 +191,7 @@ func SelectRecord(table *CatalogManager.TableCatalog,columns []string, where *ty
 			if err != nil {
 				return err, nil
 			}
-			if flag, err := checkRow(table, record, where); err != nil || flag == false {
+			if flag, err := checkRow(record, where,colPos); err != nil || flag == false {
 				if err != nil {
 					return err, nil
 				}
@@ -214,6 +215,8 @@ func SelectRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,w
 		Attr_type : table.ColumnsMap[index.Left].Type.TypeTag,
 		Attr_length : uint16(table.ColumnsMap[index.Left].Type.Length)}
 
+	colPos:=getColPos(table,where)
+
 	retNode, err := IndexManager.GetFirst(indexinfo, index.Right, index.Operator);
 		if  err != nil {
 		return err,nil
@@ -227,6 +230,12 @@ func SelectRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,w
 		}
 		if  err != nil {
 			return err, nil
+		}
+		if flag, err := checkRow(record, where,colPos); err != nil || flag == false {  //also need check
+			if err != nil {
+				return err, nil
+			}
+			continue
 		}
 		ans, err := columnFilter(table, record , columns);
 		if  err != nil {
@@ -243,7 +252,8 @@ func SelectRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,w
 func DeleteRecord(table *CatalogManager.TableCatalog,where *types.Where) (error,int) {
 	var cnt int = 0
 	totalBlockNum, _ := BufferManager.GetBlockNumber(table.TableName)
-	for blockId := uint16(0); blockId < totalBlockNum; blockId++ {
+	colPos:=getColPos(table,where)
+ 	for blockId := uint16(0); blockId < totalBlockNum; blockId++ {
 		for offset := uint16(0); offset + uint16(table.RecordLength) < BufferManager.BlockSize; offset += uint16(table.RecordLength) {
 			pos := dataPosition{
 				Block : blockId,
@@ -258,7 +268,7 @@ func DeleteRecord(table *CatalogManager.TableCatalog,where *types.Where) (error,
 			if err != nil {
 				return err, 0
 			}
-			if flag, err := checkRow(table, record, where); flag == false || err != nil {
+			if flag, err := checkRow(record, where,colPos); flag == false || err != nil {
 				if err != nil {
 					return err, 0
 				}
@@ -277,6 +287,8 @@ func DeleteRecord(table *CatalogManager.TableCatalog,where *types.Where) (error,
 
 //DeleteRecordWithIndex  传入select的表，where表达式, index为左 string 右 value 中间是判断符的struct， string保证存在索引 int返回删除了多少行
 func DeleteRecordWithIndex(table *CatalogManager.TableCatalog,where *types.Where,index types.ComparisonExprLSRV) (error,int)  {
+
+	colPos:=getColPos(table,where)
 
 	indexinfo := IndexManager.IndexInfo {
 		Table_name : table.TableName,
@@ -297,6 +309,12 @@ func DeleteRecordWithIndex(table *CatalogManager.TableCatalog,where *types.Where
 		}
 		if  err != nil {	
 			return err, 0
+		}
+		if flag, err := checkRow(record, where,colPos); flag == false || err != nil {
+			if err != nil {
+				return err, 0
+			}
+			continue
 		}
 		if err := deleteRecord(table, retNode.Pos); err != nil {
 			return err, 0

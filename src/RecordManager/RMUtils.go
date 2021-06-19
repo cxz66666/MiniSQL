@@ -1,13 +1,13 @@
 package RecordManager
 
 import (
+	"bytes"
+	"encoding/binary"
+	"minisql/src/BufferManager"
 	//"errors"
 	"minisql/src/CatalogManager"
 	"minisql/src/Interpreter/types"
 	"minisql/src/Interpreter/value"
-	"minisql/src/BufferManager"
-	"encoding/binary"
-	"bytes"
 )
 
 func getRecordData(fileName string, recordPosition dataPosition, length int) ([]byte,error) {
@@ -48,14 +48,14 @@ func getRecord(table *CatalogManager.TableCatalog, recordPosition dataPosition) 
 	//思考顺序问题, Column是以什么顺序存储的
 	for _, column := range table.ColumnsMap {
 		startPos := column.StartBytesPos
-		length := column.Type.Length
+		length := column.Type.Length  //这个length是给char和string和null用的，所以其他类型无用
 		valueType := column.Type.TypeTag
 
 		if nullmap[column.ColumnPos + 1] == false {
 			valueType = CatalogManager.Null
 		}
 		if record.Values[column.ColumnPos], err = 
-			value.Byte2Value(data[startPos: startPos + length], valueType, length); err != nil {
+			value.Byte2Value(data[startPos:], valueType, length); err != nil {
 				return true, value.Row{}, err
 		}
 	}
@@ -87,6 +87,9 @@ func setRecord(table *CatalogManager.TableCatalog, recordPosition dataPosition,
 }
 
 func columnFilter(table *CatalogManager.TableCatalog, record value.Row, columns []string) (value.Row, error ) {
+	if len(columns)==0 {  //如果select* 则使用全部的即可
+		return record,nil
+	}
 	var ret value.Row
 
 	for _, column := range(columns) {
@@ -96,18 +99,29 @@ func columnFilter(table *CatalogManager.TableCatalog, record value.Row, columns 
 	return ret,nil
 }
 
-func checkRow(table *CatalogManager.TableCatalog, record value.Row, where *types.Where) (bool, error) {
-	if where == nil {
+func checkRow(record value.Row,where *types.Where, colPos []int) (bool, error) {
+	if len(colPos) == 0 {
 		return true, nil
 	}
-	val := []value.Value{}
+	val := make([]value.Value,0,len(colPos))
 	
-	for i := 0; i <where.Expr.GetTargetColsNum(); i++ {
-		cols := where.Expr.GetTargetCols()
-		colPos := table.ColumnsMap[cols[i]].ColumnPos
-		val = append(val, record.Values[colPos])
+	for i := 0; i <len(colPos); i++ {
+		val = append(val, record.Values[colPos[i]])
 	}
 	return where.Expr.Evaluate(val)
+}
+//获取   where -> 每列所在的位置切片
+func getColPos(table *CatalogManager.TableCatalog,where *types.Where) (colPos []int)  {
+	if where==nil {
+		colPos=make([]int,0,0)
+	} else {
+		cols:=where.Expr.GetTargetCols()
+		colPos=make([]int,0,len(cols))
+		for _,item:=range cols {
+			colPos=append(colPos,table.ColumnsMap[item].ColumnPos)
+		}
+	}
+	return
 }
 func deleteRecord(table *CatalogManager.TableCatalog, recordPosition dataPosition) error {
 	data, err := getRecordData(table.TableName, recordPosition, table.RecordLength); 
