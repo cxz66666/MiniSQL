@@ -31,7 +31,7 @@ func CreateDatabase(databaseId string) error {
 	if ExistDatabase(databaseId) {
 		return errors.New("database '"+databaseId+"' had been created")
 	}
-	filePos:=FolderPosition+DatabaseNamePrefix+databaseId
+	filePos:=DBCatalogPrefix()+databaseId
 	if !Utils.Exists(filePos) {
 		f, err := Utils.CreateFile(filePos)
 		defer f.Close()
@@ -65,7 +65,7 @@ func UseDatabase(databaseId string) error  {
 	if len(UsingDatabase.DatabaseId)>0 { //write the last database index back
 		FlushDatabaseMeta(UsingDatabase.DatabaseId)
 	}
-	filePos:=FolderPosition+DatabaseNamePrefix+databaseId
+	filePos:=DBCatalogPrefix()+databaseId
 	UsingDatabase,_=GetDatabaseCatalog(databaseId)
 
 	if !Utils.Exists(filePos) {  //create the database index file
@@ -106,7 +106,7 @@ func DropDatabase(databaseId string) error  {
 		UsingDatabase=DatabaseCatalog{}
 		TableName2CatalogMap=make(map[string]*TableCatalog)
 	}
-	filePos:=FolderPosition+DatabaseNamePrefix+databaseId
+	filePos:=DBCatalogPrefix()+databaseId
 	for index,item:=range minisqlCatalog.Databases {
 		if item.DatabaseId==databaseId {
 			minisqlCatalog.Databases=append(minisqlCatalog.Databases[:index],minisqlCatalog.Databases[index+1:]...)
@@ -125,7 +125,7 @@ func FlushDatabaseMeta(databaseId string) error  {
 
 	var f *os.File
 	var err error
-	filePos:=FolderPosition+DatabaseNamePrefix+databaseId
+	filePos:=DBCatalogPrefix()+databaseId
 	if !Utils.Exists(filePos) {
 		f,err=Utils.CreateFile(filePos)
 		if err !=nil {

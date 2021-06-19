@@ -127,13 +127,18 @@ func TestCreateTable(t *testing.T) {
 	for k,v:=range TableName2CatalogMap {
 		fmt.Println(k,*v)
 	}
-	for _,item:=range create_table_test_string {
-		items,err:=parser.Parse(strings.NewReader(item))
-		if err!=nil{
-			fmt.Println(err)
+	statementChannel=make(chan types.DStatements,100)
+	finishChannel=make(chan struct{},100)
+	go func() {
+		for item:=range statementChannel {
+			fmt.Println(CreateTableCheck(item.(types.CreateTableStatement)))
+			finishChannel<- struct{}{}
 		}
-		fmt.Println(*items)
-		fmt.Println(CreateTableCheck((*items)[0].(types.CreateTableStatement)))
+	}()
+	for _,item:=range create_table_test_string {
+		err:=parser.Parse(strings.NewReader(item),statementChannel)
+		fmt.Println(err)
+		<-finishChannel
 	}
 	for k,v:=range TableName2CatalogMap {
 		fmt.Println(k,*v)
@@ -147,12 +152,18 @@ func TestDropTable(t *testing.T) {
 		fmt.Println(DropTable(types.DropTableStatement{TableName: k}))
 	}
 	fmt.Println(UseDatabase("123123"))
-	for _,item:=range drop_table_test_string{
-		items,err:=parser.Parse(strings.NewReader(item))
-		if err!=nil{
-			fmt.Println(err)
+	statementChannel=make(chan types.DStatements,100)
+	finishChannel=make(chan struct{},100)
+	go func() {
+		for item:=range statementChannel {
+			fmt.Println(DropTableCheck(item.(types.DropTableStatement)))
+			finishChannel<- struct{}{}
 		}
-		fmt.Println(DropTableCheck((*items)[0].(types.DropTableStatement)))
+	}()
+	for _,item:=range drop_table_test_string{
+		err:=parser.Parse(strings.NewReader(item),statementChannel)
+		fmt.Println(err)
+		<-finishChannel
 	}
 }
 func BenchmarkDropTable(b *testing.B) {

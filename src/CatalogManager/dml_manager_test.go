@@ -20,6 +20,10 @@ var deleteStatement=[]string{
 var updateStatement=[]string{
 	"update cxz set column1=",
 }
+var (
+	statementChannel chan types.DStatements
+	finishChannel chan struct{}
+)
 //please use TestCreateTable to create table before use TestInsertCheck
 func TestInsertCheck(t *testing.T) {
 	LoadDbMeta()
@@ -29,10 +33,18 @@ func TestInsertCheck(t *testing.T) {
 	for k,v:=range  TableName2CatalogMap{
 		fmt.Println(k,*v)
 	}
+	statementChannel=make(chan types.DStatements,100)
+	finishChannel=make(chan struct{},100)
+	go func() {
+		for item:=range statementChannel {
+			fmt.Println(InsertCheck(item.(types.InsertStament)))
+			finishChannel<- struct{}{}
+		}
+	}()
 	for _,statement:=range insertStatement {
-	 inserts,_:=parser.Parse(strings.NewReader(statement))
-	 fmt.Println(*inserts)
-	 fmt.Println(InsertCheck((*inserts)[0].(types.InsertStament)))
+	 err:=parser.Parse(strings.NewReader(statement),statementChannel)
+	 fmt.Println(err)
+	 <-finishChannel
 	}
 }
 
@@ -41,10 +53,19 @@ func BenchmarkInsertCheck(b *testing.B) {
 	fmt.Println(CreateDatabase("123123"))
 	fmt.Println(CreateDatabase("4564546"))
 	fmt.Println(UseDatabase("123123"))
-	b.Run("simple insert check", func(b *testing.B) {
-		for i:=0;i<b.N;i++{
-			inserts,_:=parser.Parse(strings.NewReader(insertStatement[0]))
-			fmt.Println(InsertCheck((*inserts)[0].(types.InsertStament)))
+	statementChannel=make(chan types.DStatements,100)
+	finishChannel=make(chan struct{},100)
+	go func() {
+		for item:=range statementChannel {
+			fmt.Println(InsertCheck(item.(types.InsertStament)))
+			finishChannel<- struct{}{}
+		}
+	}()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			err:=parser.Parse(strings.NewReader(insertStatement[0]),statementChannel)
+			fmt.Println(err)
+			<-finishChannel
 		}
 	})
 
@@ -58,10 +79,18 @@ func TestDeleteCheck(t *testing.T) {
 	for k,v:=range  TableName2CatalogMap{
 		fmt.Println(k,*v)
 	}
+	statementChannel=make(chan types.DStatements,100)
+	finishChannel=make(chan struct{},100)
+	go func() {
+		for item:=range statementChannel {
+			fmt.Println(DeleteCheck(item.(types.DeleteStatement)))
+			finishChannel<- struct{}{}
+		}
+	}()
 	for _,statement:=range deleteStatement {
-		deletes,_:=parser.Parse(strings.NewReader(statement))
-		fmt.Println(*deletes)
-		fmt.Println(DeleteCheck((*deletes)[0].(types.DeleteStatement)))
+		err:=parser.Parse(strings.NewReader(statement),statementChannel)
+		fmt.Println(err)
+		<-finishChannel
 	}
 }
 
@@ -70,13 +99,25 @@ func BenchmarkDeleteCheck(b *testing.B) {
 	fmt.Println(CreateDatabase("123123"))
 	fmt.Println(CreateDatabase("4564546"))
 	fmt.Println(UseDatabase("123123"))
+	statementChannel=make(chan types.DStatements,100)
+	finishChannel=make(chan struct{},100)
+	go func() {
+		for item:=range statementChannel {
+			fmt.Println(DeleteCheck(item.(types.DeleteStatement)))
+			finishChannel<- struct{}{}
+		}
+	}()
 	b.Run("simple delete check", func(b *testing.B) {
 		for i:=0;i<b.N;i++{
 			for _,statement:=range deleteStatement {
-				deletes,_:=parser.Parse(strings.NewReader(statement))
-				fmt.Println(*deletes)
-				fmt.Println(DeleteCheck((*deletes)[0].(types.DeleteStatement)))
+				err:=parser.Parse(strings.NewReader(statement),statementChannel)
+				fmt.Println(err)
+				<-finishChannel
 			}
 		}
 	})
+
+
+
+
 }

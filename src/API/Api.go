@@ -48,21 +48,21 @@ func HandleOneParse( dataChannel <-chan types.DStatements,stopChannel chan<- str
 		case types.ExecFile:
 			err=ExecFileAPI(statement.(types.ExecFileStatement))
 		}
-		//fmt.Println(err)
+		fmt.Println(err)
 		stopChannel<- struct{}{}
 	}
 	fmt.Println(err)
 	close(stopChannel)
 }
-//  CreateDatabaseAPI 只调用CM，和IM、RM无关
+//CreateDatabaseAPI 只调用CM，和IM、RM无关
 func CreateDatabaseAPI(statement types.CreateDatabaseStatement)  error {
 	return CatalogManager.CreateDatabase(statement.DatabaseId)
 }
-//  UseDatabaseAPI 只调用CM，和IM、RM无关
+//UseDatabaseAPI 只调用CM，和IM、RM无关
 func UseDatabaseAPI(statement types.UseDatabaseStatement) error  {
 	return CatalogManager.UseDatabase(statement.DatabaseId)
 }
-//  DropDatabaseAPI  先CM的check，和IM、RM无关 ，再调用RM的drop ， 再在CM中删除并flush
+//DropDatabaseAPI  先CM的check，和IM、RM无关 ，再调用RM的drop ， 再在CM中删除并flush
 func DropDatabaseAPI(statement types.DropDatabaseStatement) error  {
 	err:= CatalogManager.DropDatabaseCheck(statement.DatabaseId)
 	if err!=nil {
@@ -75,7 +75,7 @@ func DropDatabaseAPI(statement types.DropDatabaseStatement) error  {
 	return CatalogManager.DropDatabase(statement.DatabaseId)
 }
 
-// CreateTableAPI CM进行检查，index检查 语法检查  之后调用RM中的CreateTable创建表， 之后使用RM中的CreateIndex建索引
+//CreateTableAPI CM进行检查，index检查 语法检查  之后调用RM中的CreateTable创建表， 之后使用RM中的CreateIndex建索引
 func CreateTableAPI(statement types.CreateTableStatement) error {
 	err,indexs:= CatalogManager.CreateTableCheck(statement)
 	if err!=nil {
@@ -94,7 +94,7 @@ func CreateTableAPI(statement types.CreateTableStatement) error {
 	return nil
 }
 
-// CreateIndexAPI CM进行检查，index语法检查 之后使用RM中的CreateIndex建索引
+//CreateIndexAPI CM进行检查，index语法检查 之后使用RM中的CreateIndex建索引
 func CreateIndexAPI(statement types.CreateIndexStatement) error  {
 	err,indexCatalog:=CatalogManager.CreateIndexCheck(statement)
 	if err!=nil {
@@ -103,7 +103,7 @@ func CreateIndexAPI(statement types.CreateIndexStatement) error  {
 	return RecordManager.CreateIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableName),*indexCatalog)
 }
 
-// DropTableAPI CM进行检查，注意这个时候并不真正删除CM中的记录， 之后RM的DropTable删除table文件以及index文件， 之后让CM删除map中的记录同时flush
+//DropTableAPI CM进行检查，注意这个时候并不真正删除CM中的记录， 之后RM的DropTable删除table文件以及index文件， 之后让CM删除map中的记录同时flush
 func DropTableAPI(statement types.DropTableStatement) error  {
 	err:=CatalogManager.DropTableCheck(statement)
 	if err!=nil{
@@ -115,7 +115,7 @@ func DropTableAPI(statement types.DropTableStatement) error  {
 	}
 	return CatalogManager.DropTable(statement)
 }
-// DropIndexAPI CM进行检查， RM中删除index 之后CM中再删除并flush
+//DropIndexAPI CM进行检查， RM中删除index 之后CM中再删除并flush
 func DropIndexAPI(statement types.DropIndexStatement) error  {
 	err:=CatalogManager.DropIndexCheck(statement)
 	if err!=nil{

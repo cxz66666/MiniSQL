@@ -21,7 +21,6 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 	var startBytePos []int
 
 	if len(statement.ColumnNames)==0 { //insert all
-
 		if len(statement.Values)!=len(table.ColumnsMap) {
 			return errors.New("input numbers don't fit the column type"),nil,nil
 		}

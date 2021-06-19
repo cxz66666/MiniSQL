@@ -15,6 +15,7 @@ type TableCatalogMap map[string]*TableCatalog
 const FolderPosition="./data/"
 const MiniSqlCatalogName="minisql.meta"
 const DatabaseNamePrefix="d_"
+const DatabaseCatalogPrefix="c_"
 const (
 	Bool ScalarColumnTypeTag = iota
 	Int64
@@ -134,4 +135,23 @@ func ColumnType2StringName(v ScalarColumnTypeTag) string {
 		return "UNKNOW"
 	}
 	return "UNKNOW"
+}
+
+
+//TableFilePrefix 获取表文件的前缀，请务必保证使用时候正在使用的数据库为你需要的
+func TableFilePrefix() string {
+	return FolderPosition+DatabaseNamePrefix+UsingDatabase.DatabaseId;
+}
+
+//TableFilePrefixWithDB 获取表文件的前缀，请传入需要的dbid
+func TableFilePrefixWithDB(databaseId string) string {
+	return FolderPosition+DatabaseNamePrefix+databaseId;
+}
+//DBFilePrefix 获取db cm文件的前缀
+func DBFilePrefix() string {
+	return FolderPosition+DatabaseNamePrefix
+}
+
+func DBCatalogPrefix() string {
+	return FolderPosition+DatabaseCatalogPrefix
 }

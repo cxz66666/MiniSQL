@@ -15,7 +15,7 @@ import (
 type dataPosition = IndexManager.Position
 var freeList list.List
 
-func loadFreeList() error {
+func LoadFreeList() error {
 
 	//freeList = list.New()
 	return nil
