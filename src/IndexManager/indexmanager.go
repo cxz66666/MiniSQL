@@ -1,7 +1,6 @@
 package IndexManager
 
 import (
-	"fmt"
 	"minisql/src/Interpreter/value"
 	"os"
 	"path/filepath"
@@ -245,7 +244,7 @@ func Create(info IndexInfo) error {
 	// Create file
 	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
 	if _, err := os.Create(filename); err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
 		return err
 	}
 	return nil
@@ -256,7 +255,7 @@ func Drop(info IndexInfo) error {
 	// Create file
 	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
 	if err := os.Remove(filename); err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
 		return err
 	}
 	return nil

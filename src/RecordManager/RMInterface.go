@@ -24,22 +24,16 @@ func LoadFreeList() error {
 //以下操作均保证操作数据的名称、类型准确无误
 //删除所有以databseId开头的table文件（虽然不优雅，但是这样最简单
 func DropDatabase(databaseId string) error  {
-	//删除table数据文件
-	if err := Utils.RemoveAll(CatalogManager.FolderPosition + CatalogManager.DatabaseNamePrefix + CatalogManager.UsingDatabase.DatabaseId); err != nil {
-		return err
+	//删除 Database 全部数据文件，包括record和index
+	if err := Utils.RemoveAll(CatalogManager.TableFilePrefixWithDB(databaseId) + "_data"); err != nil {
+		return errors.New("Can't Drop " + CatalogManager.UsingDatabase.DatabaseId + "'s folder")
 	}
-
-	//删除index文件
-	//To be continued
 	return nil
 }
 //CreateTable 拿到table的名字，同时通过cm获取当前正在使用的数据库名字，创建一个自己能找到的存记录的文件
 func CreateTable(tableName string) error  {
-	filePath := CatalogManager.FolderPosition + CatalogManager.DatabaseNamePrefix + CatalogManager.UsingDatabase.DatabaseId
+	filePath := CatalogManager.TableFilePrefix() + "_data"
 
-	//test use
-	filePath = filePath + "test/"
-	//must be delete
 
 	if !Utils.Exists(filePath) {
 		err := Utils.CreateDir(filePath)
@@ -48,12 +42,10 @@ func CreateTable(tableName string) error  {
 		}
 	}
 
-	filePath = filePath + tableName
+	filePath = filePath + "/" + tableName
 	fmt.Println(filePath)
 
-
-	
-	//当前数据库所在文件夹已经建立
+	//保证当前数据库所在文件夹已经建立
 	if !Utils.Exists(filePath) {
 		f, err := Utils.CreateFile(filePath)
 		defer f.Close()
@@ -73,12 +65,11 @@ func CreateTable(tableName string) error  {
 //没管 tablecatalog
 func DropTable(tableName string) error  {
 	//删除所有的 index 文件
-	if err := IndexManager.DropAll(tableName); err != nil {
+	if err := IndexManager.DropAll(CatalogManager.TableFilePrefix() + "_data/" + tableName); err != nil {
 		return err
 	}
 	//删除table对应的record文件
-	if err := Utils.RemoveFile(CatalogManager.FolderPosition + CatalogManager.DatabaseNamePrefix + CatalogManager.UsingDatabase.DatabaseId +
-					"/" + tableName); err != nil {
+	if err := Utils.RemoveFile(CatalogManager.TableFilePrefix() + "_data/"+ tableName); err != nil {
 		return err
 	}
 	return nil
@@ -91,7 +82,7 @@ func CreateIndex(table *CatalogManager.TableCatalog, newIndex CatalogManager.Ind
 
 	indexColumn := table.ColumnsMap[newIndex.Keys[0].Name]
 	indexinfo := IndexManager.IndexInfo {
-		Table_name: table.TableName,
+		Table_name: CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
 		Attr_name: indexColumn.Name,
 		Attr_type: indexColumn.Type.TypeTag,
 		Attr_length: uint16(indexColumn.Type.Length)}
@@ -104,19 +95,23 @@ func CreateIndex(table *CatalogManager.TableCatalog, newIndex CatalogManager.Ind
 //DropIndex 传入cm中table的引用，以及indexName，cm已经做过合法性校验，直接删除索引文件，同时table中的Index属性中删除该index
 func DropIndex(table *CatalogManager.TableCatalog,indexName string) error  {
 	
-	indexColumn := table.ColumnsMap[indexName]
-	indexinfo := IndexManager.IndexInfo {
-		Table_name: table.TableName,
-		Attr_name: indexColumn.Name,
-		Attr_type: indexColumn.Type.TypeTag,
-		Attr_length: uint16(indexColumn.Type.Length)}
+	var indexColumn CatalogManager.Column
+	//删除 table Catalog 里面的index索引
 	for i, index := range table.Indexs {
 		if index.IndexName == indexName {
+			indexColumn = table.ColumnsMap[index.Keys[0].Name]
 			table.Indexs[i]= table.Indexs[len(table.Indexs) - 1]
 			table.Indexs = table.Indexs[:len(table.Indexs) - 1]
 			break}
 	}
-	if err := IndexManager.Create(indexinfo); err != nil {
+
+	indexinfo := IndexManager.IndexInfo {
+		Table_name: CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
+		Attr_name: indexColumn.Name,
+		Attr_type: indexColumn.Type.TypeTag,
+		Attr_length: uint16(indexColumn.Type.Length)}
+	
+	if err := IndexManager.Drop(indexinfo); err != nil {
 		return err
 	}
 	
@@ -125,14 +120,32 @@ func DropIndex(table *CatalogManager.TableCatalog,indexName string) error  {
 //InsertRecord 传入cm中table的引用， columnPos传入插入哪些列，其值为column在table中的第几个   startBytePos 传入开始byte的集合，分别代表每个value代表的数据从哪个byte开始存（已经加上valid位和null位），values为value数组
 func InsertRecord(table *CatalogManager.TableCatalog,columnPos []int,startBytePos []int,values []value.Value) error {
 	//首先检查 unique限制
-
+	for _, column := range(table.ColumnsMap) {
+		if !column.Unique {
+			continue
+		}
+		for i, pos := range(columnPos) {
+			//随后做index优化
+			if column.ColumnPos == pos {
+				checkCondition := types.ComparisonExprLVRS {
+						Right : column.Name,
+						Operator : value.Equal,
+						Left : values[i]}
+				err, ans := SelectRecord(table, []string{column.Name}, &checkCondition)
+				if ans != nil {
+					return errors.New(column.Name + " uniuqe conflict")
+				}
+					
+			}
+		}
+	}
 	
 	if freeList.Len() == 0 {
 		blockId, err := BufferManager.NewBlock(table.TableName);
 		if  err != nil {
 			return err
 		}
-		for offset := 0; offset + table.RecordLength < BufferManager.BlockSize; offset += table.RecordLength {
+		for offset := 0; (offset + 1 ) * table.RecordLength < BufferManager.BlockSize; offset ++ {
 			freeList.PushBack(dataPosition {
 				Block: blockId,
 				Offset: uint16(offset)})
@@ -150,11 +163,12 @@ func InsertRecord(table *CatalogManager.TableCatalog,columnPos []int,startBytePo
 	//加index
 	for _, index := range(table.Indexs) {
 		indexinfo := IndexManager.IndexInfo {
-			Table_name : table.TableName,
+			Table_name : CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
 			Attr_name : index.Keys[0].Name,
 			Attr_type : table.ColumnsMap[index.Keys[0].Name].Type.TypeTag,
 			Attr_length :uint16(table.ColumnsMap[index.Keys[0].Name].Type.Length)}
 		var val value.Value
+
 		for i, col := range(columnPos) {
 			if table.ColumnsMap[index.Keys[0].Name].ColumnPos == col {
 				val = values[i]
@@ -180,7 +194,7 @@ func SelectRecord(table *CatalogManager.TableCatalog,columns []string, where *ty
 	colPos:=getColPos(table,where)
 	totalBlockNum, _ := BufferManager.GetBlockNumber(table.TableName)
 	for blockId := uint16(0); blockId < totalBlockNum; blockId++ {
-		for offset := uint16(0); offset + uint16(table.RecordLength) < BufferManager.BlockSize; offset += uint16(table.RecordLength) {
+		for offset := uint16(0); (offset +1) * uint16(table.RecordLength) < BufferManager.BlockSize; offset += uint16(1) {
 			if BufferManager.BlockSize / uint16(table.RecordLength) * blockId + offset > uint16(table.RecordTotal){
 				break
 			}
@@ -210,7 +224,7 @@ func SelectRecord(table *CatalogManager.TableCatalog,columns []string, where *ty
 func SelectRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,where *types.Where,index types.ComparisonExprLSRV) (error,[]value.Row) {
 	ret := []value.Row{}
 	indexinfo := IndexManager.IndexInfo {
-		Table_name : table.TableName,
+		Table_name : CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
 		Attr_name : index.Left,
 		Attr_type : table.ColumnsMap[index.Left].Type.TypeTag,
 		Attr_length : uint16(table.ColumnsMap[index.Left].Type.Length)}
@@ -254,7 +268,7 @@ func DeleteRecord(table *CatalogManager.TableCatalog,where *types.Where) (error,
 	totalBlockNum, _ := BufferManager.GetBlockNumber(table.TableName)
 	colPos:=getColPos(table,where)
  	for blockId := uint16(0); blockId < totalBlockNum; blockId++ {
-		for offset := uint16(0); offset + uint16(table.RecordLength) < BufferManager.BlockSize; offset += uint16(table.RecordLength) {
+		for offset := uint16(0); (offset + 1) * uint16(table.RecordLength) < BufferManager.BlockSize; offset += uint16(1) {
 			pos := dataPosition{
 				Block : blockId,
 				Offset : offset}
@@ -275,13 +289,25 @@ func DeleteRecord(table *CatalogManager.TableCatalog,where *types.Where) (error,
 				continue
 			}
 
-			deleteRecord(table, pos)
+			if err := deleteRecord(table, pos); err != nil {
+				return err, cnt
+			}
 			//处理 index删除
+			for _, indexItem := range(table.Indexs) {
+				indexinfo := IndexManager.IndexInfo {
+					Table_name : CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
+					Attr_name : indexItem.Keys[0].Name,
+					Attr_type : table.ColumnsMap[indexItem.Keys[0].Name].Type.TypeTag,
+					Attr_length : uint16(table.ColumnsMap[indexItem.Keys[0].Name].Type.Length)}
+				val, err := columnFilter(table, record, []string{indexItem.Keys[0].Name})
+				if err := IndexManager.Delete(indexinfo, val.Values[0]); err != nil {
+					return err, cnt
+				}
+			}
 			cnt++
 		} 
+		
 	}
-
-	//where maybe nil!!!!
 	return nil,cnt
 }
 
@@ -298,7 +324,7 @@ func DeleteRecordWithIndex(table *CatalogManager.TableCatalog,where *types.Where
 	var cnt int = 0 
 	retNode, err := IndexManager.GetFirst(indexinfo, index.Right, index.Operator);
 	if  err != nil {
-		return err, 0
+		return err, cnt
 	}
 
 	for retNode != nil {
@@ -308,19 +334,28 @@ func DeleteRecordWithIndex(table *CatalogManager.TableCatalog,where *types.Where
 			continue
 		}
 		if  err != nil {	
-			return err, 0
+			return err, cnt
 		}
 		if flag, err := checkRow(record, where,colPos); flag == false || err != nil {
 			if err != nil {
-				return err, 0
+				return err, cnt
 			}
 			continue
 		}
 		if err := deleteRecord(table, retNode.Pos); err != nil {
-			return err, 0
+			return err, cnt
 		}
-		val := record.Values[table.ColumnsMap[index.Left].ColumnPos]
-		IndexManager.Delete(indexinfo, val)
+		for _, indexItem := range(table.Indexs) {
+			indexinfo := IndexManager.IndexInfo {
+				Table_name : CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
+				Attr_name : indexItem.Keys[0].Name,
+				Attr_type : table.ColumnsMap[indexItem.Keys[0].Name].Type.TypeTag,
+				Attr_length : uint16(table.ColumnsMap[indexItem.Keys[0].Name].Type.Length)}
+			val, err := columnFilter(table, record, []string{indexItem.Keys[0].Name})
+			if err := IndexManager.Delete(indexinfo, val.Values[0]); err != nil {
+				return err, cnt
+			}
+		}
 		retNode = retNode.GetNext()
 		cnt ++
 	}
@@ -330,14 +365,86 @@ func DeleteRecordWithIndex(table *CatalogManager.TableCatalog,where *types.Where
 
 //UpdateRecord 传入update的表，准备更新的column，value数组，where参数 无索引 int返回删除了多少行
 func UpdateRecord(table *CatalogManager.TableCatalog,columns []string,values []value.Value,where *types.Where) (error,int) {
-	//TODO
+	var cnt int = 0
+	totalBlockNum, _ := BufferManager.GetBlockNumber(table.TableName)
+	colPos:=getColPos(table,where)
+ 	for blockId := uint16(0); blockId < totalBlockNum; blockId++ {
+		for offset := uint16(0); (offset + 1) * uint16(table.RecordLength) < BufferManager.BlockSize; offset += uint16(1) {
+			pos := dataPosition{
+				Block : blockId,
+				Offset : offset}
+			if  BufferManager.BlockSize / uint16(table.RecordLength) * blockId + offset > uint16(table.RecordTotal){
+				break
+			}
+			flag, record, err := getRecord(table, dataPosition {Block: blockId, Offset: offset})
+			if flag == false {
+				continue
+			}
+			if err != nil {
+				return err, 0
+			}
+			if flag, err := checkRow(record, where,colPos); flag == false || err != nil {
+				if err != nil {
+					return err, 0
+				}
+				continue
+			}
+			bool,err := updateRecord(table, columns, values,pos)
+			if err != nil {
+				return err, cnt
+			}
+			if bool == false {
+				continue
+			}
+
+			cnt++
+		} 
+	}
+
 	//where maybe nil!!!!
-	return nil,0
+	return nil,cnt	
 }
 
 //UpdateRecordWithIndex 传入update的表，准备更新的column，value数组，where参数 index为左 string 右 value 中间是判断符的struct， string保证存在索引
 func UpdateRecordWithIndex(table *CatalogManager.TableCatalog,columns []string,values []value.Value,where *types.Where,index types.ComparisonExprLSRV) (error,int) {
-	//TODO
-	//where maybe nil!!!!
+	colPos:=getColPos(table,where)
+
+	indexinfo := IndexManager.IndexInfo {
+		Table_name : table.TableName,
+		Attr_name : index.Left,
+		Attr_type : table.ColumnsMap[index.Left].Type.TypeTag,
+		Attr_length : uint16(table.ColumnsMap[index.Left].Type.Length)}
+	var cnt int = 0 
+	retNode, err := IndexManager.GetFirst(indexinfo, index.Right, index.Operator);
+	if  err != nil {
+		return err, cnt
+	}
+
+	for retNode != nil {
+		flag, record, err := getRecord(table, retNode.Pos);
+		if(flag == false) {
+			retNode = retNode.GetNext()
+			continue
+		}
+		if  err != nil {	
+			return err, cnt
+		}
+		if flag, err := checkRow(record, where,colPos); flag == false || err != nil {
+			if err != nil {
+				return err, cnt
+			}
+			continue
+		}
+		bool,err := updateRecord(table, columns, values, retNode.pos)
+		if err != nil {
+			return err, cnt
+		}
+		if bool == false {
+			continue
+		}
+		
+		retNode = retNode.GetNext()
+		cnt ++
+	}
 	return nil,0
 }
