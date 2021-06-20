@@ -9,7 +9,6 @@ import (
 	"minisql/src/CatalogManager"
 	"minisql/src/Interpreter/parser"
 	"minisql/src/Interpreter/types"
-	"minisql/src/RecordManager"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,7 +26,6 @@ func InitDB() error {
 		return err
 	}
 	BufferManager.InitBuffer()
-	RecordManager.LoadFreeList()
 
 	return nil
 }

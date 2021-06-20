@@ -2,6 +2,7 @@ package RecordManager
 
 import (
 	"bytes"
+	"container/list"
 	"encoding/binary"
 	"minisql/src/BufferManager"
 	//"errors"
@@ -11,8 +12,20 @@ import (
 	"minisql/src/Interpreter/value"
 )
 
-func getRecordData(tabelName string, recordPosition dataPosition, length int) ([]byte,error) {
-	block, err := BufferManager.BlockRead(CatalogManager.TableFilePrefix() + "_data/" + tabelName, recordPosition.Block);
+
+func loadFreeList(tableName string) (*list.List, error) {
+	//fileName := CatalogManager.TableFilePrefix() + "_data/" + tableName + "_list"
+	
+	return nil, nil
+}
+
+func flushFreeList(tableName string, freeList *list.List) error {
+	///fileName := CatalogManager.TableFilePrefix() + "_data/" + tableName + "_list"
+	return nil
+}
+
+func getRecordData(tableName string, recordPosition dataPosition, length int) ([]byte,error) {
+	block, err := BufferManager.BlockRead(CatalogManager.TableFilePrefix() + "_data/" + tableName, recordPosition.Block);
 	if  err != nil {
 		return nil, err
 	}
@@ -21,8 +34,8 @@ func getRecordData(tabelName string, recordPosition dataPosition, length int) ([
 	return record, nil
 }
 
-func setRecordData(tabelName string, recordPosition dataPosition, data []byte, length int) error {
-	block, err := BufferManager.BlockRead(CatalogManager.TableFilePrefix() + "_data/" +tabelName, recordPosition.Block);
+func setRecordData(tableName string, recordPosition dataPosition, data []byte, length int) error {
+	block, err := BufferManager.BlockRead(CatalogManager.TableFilePrefix() + "_data/" +tableName, recordPosition.Block);
 	if  err != nil {
 		return err
 	}
