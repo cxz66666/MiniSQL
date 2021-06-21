@@ -2,9 +2,14 @@ package RecordManager
 
 import (
 	"bytes"
-	"container/list"
 	"encoding/binary"
+	"errors"
 	"minisql/src/BufferManager"
+	"minisql/src/Utils"
+	"os"
+
+	"github.com/tinylib/msgp/msgp"
+
 	//"errors"
 	"minisql/src/CatalogManager"
 	"minisql/src/IndexManager"
@@ -12,87 +17,151 @@ import (
 	"minisql/src/Interpreter/value"
 )
 
+var FreeList IndexManager.FreeList
 
-func loadFreeList(tableName string) (*list.List, error) {
-	//fileName := CatalogManager.TableFilePrefix() + "_data/" + tableName + "_list"
-	
-	return nil, nil
+//每次insert前都进行load
+func loadFreeList(tableName string) error {
+	fileName := CatalogManager.TableFilePrefix() + "_data/" + tableName + "_list" //文件名
+	if FreeList.Name == fileName {                                                  //已经load了
+		return nil
+	} else if len(FreeList.Name) > 0 {//需要把旧的flush
+		err := FlushFreeList()
+		if err != nil {
+			return err
+		}
+	}
+	if !Utils.Exists(fileName) {  //如果没有这个文件 新建该文件并序列化写入初始name信息
+		newfile, err := Utils.CreateFile(fileName)
+		defer newfile.Close()
+		if err!=nil {
+			return err
+		}
+		wt:=msgp.NewWriter(newfile)
+		FreeList.Name=fileName
+		err=FreeList.EncodeMsg(wt)
+		if err!=nil	 {
+			return err
+		}
+		return wt.Flush()
+	}
+	//存在该文件 直接读取即可
+	existFile, err := os.Open(fileName)
+	defer existFile.Close()
+	if err != nil {
+		return errors.New("打开free list文件失败")
+	}
+	rd := msgp.NewReader(existFile)
+	return FreeList.DecodeMsg(rd)
 }
 
-func flushFreeList(tableName string, freeList *list.List) error {
-	///fileName := CatalogManager.TableFilePrefix() + "_data/" + tableName + "_list"
-	return nil
+//FlushFreeList 退出程序时候请不要忘记
+func FlushFreeList() error {
+	oldList, err := os.OpenFile(FreeList.Name, os.O_WRONLY|os.O_TRUNC, 0666) //写入旧文件
+	defer oldList.Close()
+	if err != nil {
+		return errors.New("free list文件打开失败")
+	}
+	wt := msgp.NewWriter(oldList)
+	err = FreeList.EncodeMsg(wt)
+	if err != nil {
+		return errors.New("free list文件写入失败")
+	}
+	return wt.Flush()
+
 }
 
-func getRecordData(tableName string, recordPosition dataPosition, length int) ([]byte,error) {
-	block, err := BufferManager.BlockRead(CatalogManager.TableFilePrefix() + "_data/" + tableName, recordPosition.Block);
-	if  err != nil {
+func getRecordData(tableName string, recordPosition dataNode, length int) ([]byte, error) {
+	block, err := BufferManager.BlockRead(CatalogManager.TableFilePrefix()+"_data/"+tableName, recordPosition.Block)
+	if err != nil {
 		return nil, err
 	}
 	defer block.FinishRead()
-	record := block.Data[int(recordPosition.Offset) * length: int(recordPosition.Offset + 1) * length]
+	record := block.Data[int(recordPosition.Offset)*length : int(recordPosition.Offset+1)*length]
 	return record, nil
 }
 
-func setRecordData(tableName string, recordPosition dataPosition, data []byte, length int) error {
-	block, err := BufferManager.BlockRead(CatalogManager.TableFilePrefix() + "_data/" +tableName, recordPosition.Block);
-	if  err != nil {
+func setRecordData(tableName string, recordPosition dataNode, data []byte, length int) error {
+	block, err := BufferManager.BlockRead(CatalogManager.TableFilePrefix()+"_data/"+tableName, recordPosition.Block)
+	if err != nil {
 		return err
 	}
 	block.SetDirty()
 	defer block.FinishRead()
 
-	record := block.Data[int(recordPosition.Offset) * length: int(recordPosition.Offset + 1) * length]
+	record := block.Data[int(recordPosition.Offset)*length : int(recordPosition.Offset+1)*length]
 	copy(record, data)
 	return nil
-} 
+}
 
-func getRecord(table *CatalogManager.TableCatalog, recordPosition dataPosition) (bool, value.Row, error) {
-	data, err := getRecordData(table.TableName, recordPosition, table.RecordLength);
-	if err != nil{
+func getRecord(table *CatalogManager.TableCatalog, recordPosition dataNode) (bool, value.Row, error) {
+	data, err := getRecordData(table.TableName, recordPosition, table.RecordLength)
+	if err != nil {
 		return false, value.Row{}, err
-	} 
-	nullmap := make([]bool, len(table.ColumnsMap) / 8 + 1)
-	bytebuf := bytes.NewBuffer(data[: (len(table.ColumnsMap)) /8 + 1 ])
+	}
+	nullmap := make([]bool, len(table.ColumnsMap)/8+1)
+	bytebuf := bytes.NewBuffer(data[:(len(table.ColumnsMap))/8+1])
 	binary.Read(bytebuf, binary.LittleEndian, &nullmap)
-	if(nullmap[0] == false) {
+	if nullmap[0] == false {
 		return false, value.Row{}, nil
 	}
 	record := value.Row{Values: make([]value.Value, len(table.ColumnsMap))}
 	//思考顺序问题, Column是以什么顺序存储的
 	for _, column := range table.ColumnsMap {
 		startPos := column.StartBytesPos
-		length := column.Type.Length  //这个length是给char和string和null用的，所以其他类型无用
+		length := column.Type.Length //这个length是给char和string和null用的，所以其他类型无用
 		valueType := column.Type.TypeTag
 
-		if nullmap[column.ColumnPos + 1] == false {
+		if nullmap[column.ColumnPos+1] == false {
 			valueType = CatalogManager.Null
 		}
-		if record.Values[column.ColumnPos], err = 
+		if record.Values[column.ColumnPos], err =
 			value.Byte2Value(data[startPos:], valueType, length); err != nil {
-				return true, value.Row{}, err
+			return true, value.Row{}, err
 		}
 	}
 	return true, record, nil
 }
 
-func setRecord(table *CatalogManager.TableCatalog, recordPosition dataPosition, 
-			   columnPos []int, startBytePos []int, values []value.Value) error {
-	data := make([]byte,table.RecordLength)
-	nullmap := make([]bool, len(table.ColumnsMap)/8 + 1)
-	nullmap[0] = true
-	for _, columnIndex := range(columnPos) {
-		nullmap[columnIndex + 1] = true
+func boolsToBytes(t []bool) []byte {
+	b := make([]byte, (len(t)+7)/8)
+	for i, x := range t {
+		if x {
+			b[i/8] |= 0x80 >> uint(i%8)
+		}
 	}
-	bytebuf := bytes.NewBuffer([]byte{})
-	binary.Write(bytebuf, binary.LittleEndian, nullmap)
-	copy(data[: (len(table.ColumnsMap)) /8 +1], bytebuf.Bytes())
-	for index, _ := range(columnPos) {
+	return b
+}
+
+func bytesToBools(b []byte) []bool {
+	t := make([]bool, 8*len(b))
+	for i, x := range b {
+		for j := 0; j < 8; j++ {
+			if (x<<uint(j))&0x80 == 0x80 {
+				t[8*i+j] = true
+			}
+		}
+	}
+	return t
+}
+
+func setRecord(table *CatalogManager.TableCatalog, recordPosition dataNode,
+	columnPos []int, startBytePos []int, values []value.Value) error {
+	data := make([]byte, table.RecordLength)
+	nullmapBytes:=data[0:len(table.ColumnsMap)/8+1]
+	nullmap:=bytesToBools(nullmapBytes)
+	nullmap[0] = true
+	for _, columnIndex := range columnPos {
+		nullmap[columnIndex+1] = true
+	}
+	nullmapBytes=boolsToBytes(nullmap)
+
+	copy(data[:(len(table.ColumnsMap))/8+1], nullmapBytes)
+	for index, _ := range columnPos {
 		tmp, err := values[index].Convert2Bytes()
 		if err != nil {
 			return err
 		}
-		copy(data[startBytePos[index] : ], tmp)
+		copy(data[startBytePos[index]:], tmp)
 	}
 	if err := setRecordData(table.TableName, recordPosition, data, table.RecordLength); err != nil {
 		return err
@@ -100,92 +169,93 @@ func setRecord(table *CatalogManager.TableCatalog, recordPosition dataPosition,
 	return nil
 }
 
-func columnFilter(table *CatalogManager.TableCatalog, record value.Row, columns []string) (value.Row, error ) {
-	if len(columns)==0 {  //如果select* 则使用全部的即可
-		return record,nil
+func columnFilter(table *CatalogManager.TableCatalog, record value.Row, columns []string) (value.Row, error) {
+	if len(columns) == 0 { //如果select* 则使用全部的即可
+		return record, nil
 	}
 	var ret value.Row
 
-	for _, column := range(columns) {
+	for _, column := range columns {
 		ret.Values = append(ret.Values, record.Values[table.ColumnsMap[column].ColumnPos])
 	}
 
-	return ret,nil
+	return ret, nil
 }
 
-func checkRow(record value.Row,where *types.Where, colPos []int) (bool, error) {
+func checkRow(record value.Row, where *types.Where, colPos []int) (bool, error) {
 	if len(colPos) == 0 {
 		return true, nil
 	}
-	val := make([]value.Value,0,len(colPos))
-	
-	for i := 0; i <len(colPos); i++ {
+	val := make([]value.Value, 0, len(colPos))
+
+	for i := 0; i < len(colPos); i++ {
 		val = append(val, record.Values[colPos[i]])
 	}
 	return where.Expr.Evaluate(val)
 }
+
 //获取   where -> 每列所在的位置切片
-func getColPos(table *CatalogManager.TableCatalog,where *types.Where) (colPos []int)  {
-	if where==nil {
-		colPos=make([]int,0,0)
+func getColPos(table *CatalogManager.TableCatalog, where *types.Where) (colPos []int) {
+	if where == nil {
+		colPos = make([]int, 0, 0)
 	} else {
-		cols:=where.Expr.GetTargetCols()
-		colPos=make([]int,0,len(cols))
-		for _,item:=range cols {
-			colPos=append(colPos,table.ColumnsMap[item].ColumnPos)
+		cols := where.Expr.GetTargetCols()
+		colPos = make([]int, 0, len(cols))
+		for _, item := range cols {
+			colPos = append(colPos, table.ColumnsMap[item].ColumnPos)
 		}
 	}
 	return
 }
-func deleteRecord(table *CatalogManager.TableCatalog, recordPosition dataPosition) error {
-	data, err := getRecordData(table.TableName, recordPosition, table.RecordLength); 
+func deleteRecord(table *CatalogManager.TableCatalog, recordPosition dataNode) error {
+	data, err := getRecordData(table.TableName, recordPosition, table.RecordLength)
 	if err != nil {
 		return err
 	}
-	nullmap := make([]bool, len(table.ColumnsMap) + 1)
-	bytebuf := bytes.NewBuffer(data[: (len(table.ColumnsMap) +1) /8 ])
+	nullmap := make([]bool, len(table.ColumnsMap)+1)
+	bytebuf := bytes.NewBuffer(data[:(len(table.ColumnsMap)+1)/8])
 	binary.Read(bytebuf, binary.LittleEndian, &nullmap)
 	nullmap[0] = true
 	bytebuf = bytes.NewBuffer([]byte{})
 	binary.Write(bytebuf, binary.LittleEndian, nullmap)
-	copy(data[: (len(table.ColumnsMap) +1) /8 ], bytebuf.Bytes())
+	copy(data[:(len(table.ColumnsMap)+1)/8], bytebuf.Bytes())
 
 	table.RecordCnt--
 	return nil
 }
-func updateRecordData(table *CatalogManager.TableCatalog, recordPosition dataPosition, record value.Row) error {
-	data := make([]byte,table.RecordLength)
-	nullmap := make([]bool, len(table.ColumnsMap)/8 + 1)
+func updateRecordData(table *CatalogManager.TableCatalog, recordPosition dataNode, record value.Row) error {
+	data := make([]byte, table.RecordLength)
+	nullmap := make([]bool, len(table.ColumnsMap)/8+1)
 	nullmap[0] = true
-	
-	for i, val := range(record.Values) {
+
+	for i, val := range record.Values {
 		if val.Convert2IntType() != value.NullType {
-			nullmap[i + 1] = true
+			nullmap[i+1] = true
 		}
 	}
 	bytebuf := bytes.NewBuffer([]byte{})
 	binary.Write(bytebuf, binary.LittleEndian, nullmap)
-	copy(data[: (len(table.ColumnsMap)) /8 +1], bytebuf.Bytes())
-	for i, value := range(record.Values) {
+	copy(data[:(len(table.ColumnsMap))/8+1], bytebuf.Bytes())
+	for i, value := range record.Values {
 		tmp, err := value.Convert2Bytes()
 		if err != nil {
 			return err
 		}
-		for _, col := range(table.ColumnsMap) {
+		for _, col := range table.ColumnsMap {
 			if col.ColumnPos == i {
-				copy(data[col.StartBytesPos : ], tmp)
+				copy(data[col.StartBytesPos:], tmp)
 				break
 			}
 		}
-		
+
 	}
 	if err := setRecordData(table.TableName, recordPosition, data, table.RecordLength); err != nil {
 		return err
 	}
 	return nil
 }
-func updateRecord(table *CatalogManager.TableCatalog, columns []string,values []value.Value, recordPosition dataPosition) (bool, error ) {
-	flag, record, err := getRecord(table, recordPosition); 
+func updateRecord(table *CatalogManager.TableCatalog, columns []string, values []value.Value, recordPosition dataNode) (bool, error) {
+	flag, record, err := getRecord(table, recordPosition)
 	if err != nil {
 		return false, err
 	}
@@ -193,31 +263,31 @@ func updateRecord(table *CatalogManager.TableCatalog, columns []string,values []
 		return false, nil
 	}
 	//删除旧index
-	for _, indexItem := range(table.Indexs) {
+	for _, indexItem := range table.Indexs {
 
-		indexinfo := IndexManager.IndexInfo {
-			Table_name : CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
-			Attr_name : indexItem.Keys[0].Name,
-			Attr_type : table.ColumnsMap[indexItem.Keys[0].Name].Type.TypeTag,
-			Attr_length : uint16(table.ColumnsMap[indexItem.Keys[0].Name].Type.Length)}
+		indexinfo := IndexManager.IndexInfo{
+			Table_name:  CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
+			Attr_name:   indexItem.Keys[0].Name,
+			Attr_type:   table.ColumnsMap[indexItem.Keys[0].Name].Type.TypeTag,
+			Attr_length: uint16(table.ColumnsMap[indexItem.Keys[0].Name].Type.Length)}
 		val := record.Values[table.ColumnsMap[indexItem.Keys[0].Name].ColumnPos]
 		if err := IndexManager.Delete(indexinfo, val); err != nil {
 			return false, err
 		}
 	}
 	//更新record
-	for i, columnName := range(columns) {
+	for i, columnName := range columns {
 		record.Values[table.ColumnsMap[columnName].ColumnPos] = values[i]
 	}
 	//插入新index
-	for _, indexItem := range(table.Indexs) {
-		indexinfo := IndexManager.IndexInfo {
-			Table_name : CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
-			Attr_name : indexItem.Keys[0].Name,
-			Attr_type : table.ColumnsMap[indexItem.Keys[0].Name].Type.TypeTag,
-			Attr_length : uint16(table.ColumnsMap[indexItem.Keys[0].Name].Type.Length)}
+	for _, indexItem := range table.Indexs {
+		indexinfo := IndexManager.IndexInfo{
+			Table_name:  CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
+			Attr_name:   indexItem.Keys[0].Name,
+			Attr_type:   table.ColumnsMap[indexItem.Keys[0].Name].Type.TypeTag,
+			Attr_length: uint16(table.ColumnsMap[indexItem.Keys[0].Name].Type.Length)}
 		val := record.Values[table.ColumnsMap[indexItem.Keys[0].Name].ColumnPos]
-		if err := IndexManager.Insert(indexinfo, val, recordPosition ); err != nil {
+		if err := IndexManager.Insert(indexinfo, val, recordPosition); err != nil {
 			return false, err
 		}
 	}

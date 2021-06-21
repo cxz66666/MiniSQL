@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 )
 
+
+//go:generate msgp
 type bpNode struct {
 	key_length uint16
 	data       []byte
@@ -17,6 +19,10 @@ type Position struct {
 	Offset uint16
 }
 
+type FreeList struct {
+	Name string
+	Positions []Position
+}
 /*
  * 由 IndexInfo 唯一确定了一个 index，
  * 因为我没法调用 CM，感觉这些都是必要的？

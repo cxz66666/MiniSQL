@@ -283,15 +283,15 @@ column_type:
 scalar_type:
     BOOL
   {
-    $$ = types.ColumnType{TypeTag: types.Bool}
+    $$ = types.ColumnType{TypeTag: types.Bool, Length:1}
   }
   | INT64
   {
-    $$ = types.ColumnType{TypeTag: types.Int64}
+    $$ = types.ColumnType{TypeTag: types.Int64, Length:8}
   }
   | FLOAT64
   {
-    $$ = types.ColumnType{TypeTag: types.Float64}
+    $$ = types.ColumnType{TypeTag: types.Float64, Length:8}
   }
 
   | BYTES '(' length ')'
@@ -300,11 +300,11 @@ scalar_type:
   }
   | DATE
   {
-    $$ = types.ColumnType{TypeTag: types.Date}
+    $$ = types.ColumnType{TypeTag: types.Date, Length:5}
   }
   | TIMESTAMP
   {
-    $$ = types.ColumnType{TypeTag: types.Timestamp}
+    $$ = types.ColumnType{TypeTag: types.Timestamp, Length:8}
   }
 
 length:

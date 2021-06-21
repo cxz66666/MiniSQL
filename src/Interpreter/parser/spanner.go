@@ -889,19 +889,19 @@ yydefault:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line src/Interpreter/parser/spanner.go.y:285
 		{
-			yyVAL.coltype = types.ColumnType{TypeTag: types.Bool}
+			yyVAL.coltype = types.ColumnType{TypeTag: types.Bool, Length: 1}
 		}
 	case 41:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line src/Interpreter/parser/spanner.go.y:289
 		{
-			yyVAL.coltype = types.ColumnType{TypeTag: types.Int64}
+			yyVAL.coltype = types.ColumnType{TypeTag: types.Int64, Length: 8}
 		}
 	case 42:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line src/Interpreter/parser/spanner.go.y:293
 		{
-			yyVAL.coltype = types.ColumnType{TypeTag: types.Float64}
+			yyVAL.coltype = types.ColumnType{TypeTag: types.Float64, Length: 8}
 		}
 	case 43:
 		yyDollar = yyS[yypt-4 : yypt+1]
@@ -913,13 +913,13 @@ yydefault:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line src/Interpreter/parser/spanner.go.y:302
 		{
-			yyVAL.coltype = types.ColumnType{TypeTag: types.Date}
+			yyVAL.coltype = types.ColumnType{TypeTag: types.Date, Length: 5}
 		}
 	case 45:
 		yyDollar = yyS[yypt-1 : yypt+1]
 //line src/Interpreter/parser/spanner.go.y:306
 		{
-			yyVAL.coltype = types.ColumnType{TypeTag: types.Timestamp}
+			yyVAL.coltype = types.ColumnType{TypeTag: types.Timestamp, Length: 8}
 		}
 	case 46:
 		yyDollar = yyS[yypt-1 : yypt+1]

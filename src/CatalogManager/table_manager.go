@@ -45,15 +45,21 @@ func createTableInitAndCheck(statement *TableCatalog) (error,[]IndexCatalog) {
 		}
 		columnNum+=1
 	}
-	recordlength+=(columnNum)/8+1  //bit map and a vaild part!!
-	bytesPos[0]=(columnNum)/8+1
-	for i:=1;i<len(statement.ColumnsMap);i++{
-		bytesPos[i]+=bytesPos[i-1]
+	toolBytes:=(columnNum)/8+1
+	recordlength+= toolBytes //bit map and a vaild part!!
+
+
+	for i:=0;i<len(statement.ColumnsMap);i++{
+		tmpNum:=bytesPos[i]
+		bytesPos[i]=toolBytes
+		toolBytes+=tmpNum
 	}
+	//奇怪的算法，先从1-n-1累加，然后将第0位置为初始值
 	for k,v:=range statement.ColumnsMap {
 		v.StartBytesPos=bytesPos[v.ColumnPos]
 		statement.ColumnsMap[k]=v
 	}
+
 	//keys:=make([]Key,0,6)//this key maybe a composite keys, so it's needed to store the keys and names
 	//var indexName string
 	//for _,item:=range statement.PrimaryKeys { //key name must exist in Columns name

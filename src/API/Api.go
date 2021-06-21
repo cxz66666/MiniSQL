@@ -91,7 +91,8 @@ func CreateTableAPI(statement types.CreateTableStatement) error {
 			return err
 		}
 	}
-	return nil
+	err=CatalogManager.FlushDatabaseMeta(CatalogManager.UsingDatabase.DatabaseId)
+	return err
 }
 
 //CreateIndexAPI CM进行检查，index语法检查 之后使用RM中的CreateIndex建索引
