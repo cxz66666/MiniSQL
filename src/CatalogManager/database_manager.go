@@ -9,7 +9,7 @@ import (
 )
 var(
 	UsingDatabase DatabaseCatalog
-	TableName2CatalogMap TableCatalogMap  //table name to catalog
+	TableName2CatalogMap TableCatalogMap=make(map[string]*TableCatalog)  //table name to catalog
 )
 func ExistDatabase(databaseId string) bool   {
 	for _,item:=range minisqlCatalog.Databases {

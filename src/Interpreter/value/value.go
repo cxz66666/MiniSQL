@@ -66,6 +66,7 @@ type Alien struct {
 func (i Int)String() string {
 	return fmt.Sprint(i.Val)
 }
+//Compare1 仅用来测试 无实际意义
 func (i Int)Compare1(v Int,op CompareType)(bool,error) {
 	switch op {
 	case Great:
@@ -84,21 +85,39 @@ func (i Int)Compare1(v Int,op CompareType)(bool,error) {
 	return false,fmt.Errorf("unknow operation type %d", op)
 }
 func (i Int)Compare(v Value,op CompareType)(bool,error) {
-	switch op {
-	case Great:
-		return i.Val > v.(Int).Val,nil
-	case GreatEqual:
-		return i.Val >= v.(Int).Val,nil
-	case Less:
-		return i.Val < v.(Int).Val,nil
-	case LessEqual:
-		return i.Val <= v.(Int).Val,nil
-	case Equal:
-		return i.Val == v.(Int).Val,nil
-	case NotEqual:
-		return i.Val != v.(Int).Val,nil
+	switch v.(type) {
+	case Int:
+		switch op {
+		case Great:
+			return i.Val > v.(Int).Val,nil
+		case GreatEqual:
+			return i.Val >= v.(Int).Val,nil
+		case Less:
+			return i.Val < v.(Int).Val,nil
+		case LessEqual:
+			return i.Val <= v.(Int).Val,nil
+		case Equal:
+			return i.Val == v.(Int).Val,nil
+		case NotEqual:
+			return i.Val != v.(Int).Val,nil
+		}
+	case Float:
+		switch op {
+		case Great:
+			return float64(i.Val) > v.(Float).Val,nil
+		case GreatEqual:
+			return float64(i.Val) >= v.(Float).Val,nil
+		case Less:
+			return float64(i.Val)< v.(Float).Val,nil
+		case LessEqual:
+			return float64(i.Val) <= v.(Float).Val,nil
+		case Equal:
+			return float64(i.Val) == v.(Float).Val,nil
+		case NotEqual:
+			return float64(i.Val) != v.(Float).Val,nil
+		}
 	}
-	return false,fmt.Errorf("unknow operation type %d", op)
+	return false,nil
 }
 func (i Int)SafeCompare(v Value,op CompareType)(bool,error) {
 	switch v.(type) {
@@ -127,20 +146,39 @@ func (i Float) String() string {
 	return fmt.Sprint(i.Val)
 }
 func (i Float)Compare(v Value,op CompareType)(bool,error) {
-	switch op {
-	case Great:
-		return i.Val > v.(Float).Val,nil
-	case GreatEqual:
-		return i.Val >= v.(Float).Val,nil
-	case Less:
-		return i.Val < v.(Float).Val,nil
-	case LessEqual:
-		return i.Val <= v.(Float).Val,nil
-	case Equal:
-		return i.Val == v.(Float).Val,nil
-	case NotEqual:
-		return i.Val != v.(Float).Val,nil
+	switch v.(type) {
+	case Int:
+		switch op {
+		case Great:
+			return i.Val > float64(v.(Int).Val),nil
+		case GreatEqual:
+			return i.Val >= float64(v.(Int).Val),nil
+		case Less:
+			return i.Val <float64(v.(Int).Val),nil
+		case LessEqual:
+			return i.Val <= float64(v.(Int).Val),nil
+		case Equal:
+			return i.Val == float64(v.(Int).Val),nil
+		case NotEqual:
+			return i.Val != float64(v.(Int).Val),nil
+		}
+	case Float:
+		switch op {
+		case Great:
+			return i.Val > v.(Float).Val,nil
+		case GreatEqual:
+			return i.Val >= v.(Float).Val,nil
+		case Less:
+			return i.Val < v.(Float).Val,nil
+		case LessEqual:
+			return i.Val <= v.(Float).Val,nil
+		case Equal:
+			return i.Val == v.(Float).Val,nil
+		case NotEqual:
+			return i.Val != v.(Float).Val,nil
+		}
 	}
+
 	return false,fmt.Errorf("unknow operation type %d", op)
 }
 func (i Float)SafeCompare(v Value,op CompareType)(bool,error) {

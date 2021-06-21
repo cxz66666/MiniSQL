@@ -1,7 +1,6 @@
 package API
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"minisql/src/CatalogManager"
@@ -220,23 +219,18 @@ func SelectAPI(statement types.SelectStatement) error  {
 	if err!=nil {
 		return err
 	}
-	var rowNum []value.Row
+	var rows []value.Row
 	if exprLSRV==nil{
-		err,rowNum=RecordManager.SelectRecord(CatalogManager.GetTableCatalogUnsafe(statement.TableNames[0]),statement.Fields.ColumnNames,statement.Where)
+		err, rows =RecordManager.SelectRecord(CatalogManager.GetTableCatalogUnsafe(statement.TableNames[0]),statement.Fields.ColumnNames,statement.Where)
 	} else {
-		err,rowNum=RecordManager.SelectRecordWithIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableNames[0]),statement.Fields.ColumnNames,statement.Where,*exprLSRV)
+		err, rows =RecordManager.SelectRecordWithIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableNames[0]),statement.Fields.ColumnNames,statement.Where,*exprLSRV)
 	}
 	if err!=nil {
 		return err
 	}
-	for _,item:=range rowNum{
-		b:=bytes.NewBuffer([]byte{})
-		for _,v:=range item.Values {
-			b.WriteString(v.String())
-		}
-		fmt.Println(b.String())
-	}
-	return nil
+	colNames:=CatalogManager.GetTableColumnsInOrder(statement.TableNames[0])
+	return  PrintTable(statement.TableNames[0],colNames,  rows)
+
 }
 // ExecFileAPI 执行某文件  开辟两个新协程
 func ExecFileAPI(statement types.ExecFileStatement) error  {

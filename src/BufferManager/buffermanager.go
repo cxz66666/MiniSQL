@@ -85,8 +85,8 @@ func BlockFlushAll() (bool, error) {
 		if item.dirty {
 			err := item.flush()
 			if err != nil {
+				return false, err
 			}
-			return false, err
 		}
 		item.reset()
 	}

@@ -1,6 +1,7 @@
 package IndexManager
 
 import (
+	"minisql/src/BufferManager"
 	"minisql/src/Interpreter/value"
 	"os"
 	"path/filepath"
@@ -228,8 +229,8 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		}
 		// Switch to the next node
 		next_node_id := cur_node.getNext()
-		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
 		cur_node_block.FinishRead()
+		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
 		cur_node = next_node
 		cur_node_block = next_node_block
 		i = 0
@@ -254,6 +255,11 @@ func Create(info IndexInfo) error {
 		return err
 	}
 
+	root_id, _ := BufferManager.NewBlock(filename)
+	root_node, root_block := getBpNode(filename, root_id, info.Attr_length)
+	root_block.SetDirty()
+	root_node.nodeInit()
+	root_block.FinishRead()
 	return nil
 }
 

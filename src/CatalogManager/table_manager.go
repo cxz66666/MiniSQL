@@ -177,3 +177,12 @@ func DropTable(statement types.DropTableStatement) error  {
 func GetTableCatalogUnsafe(tableName string) *TableCatalog  {
 	return TableName2CatalogMap[tableName]
 }
+//GetTableColumnsInOrder 顺序返回该表的列名（按照建表时候的顺序）
+func GetTableColumnsInOrder(table string) []string  {
+	tablecm:=TableName2CatalogMap[table]
+	ans:=make([]string,len(tablecm.ColumnsMap))
+	for _,item:=range tablecm.ColumnsMap {
+		ans[item.ColumnPos]=item.Name
+	}
+	return ans
+}
