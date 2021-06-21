@@ -16,7 +16,17 @@ type dataNode = IndexManager.Position
 //以下操作均保证操作数据的名称、类型准确无误
 //删除所有以databseId开头的table文件（虽然不优雅，但是这样最简单
 func DropDatabase(databaseId string) error {
-	//删除 Database 全部数据文件，包括record和index
+	tables,err:=CatalogManager.GetDBTablesMap(databaseId) //拿到所有tablemap
+	if err!=nil{
+		return err
+	}
+	for _,item:=range tables{  //删除所有表
+		err=DropTable(item.TableName)
+		if err!=nil {
+			return err
+		}
+	}
+	//删除 Database 剩余的文件
 	if err := Utils.RemoveAll(CatalogManager.TableFilePrefixWithDB(databaseId) + "_data"); err != nil {
 		return errors.New("Can't Drop " + CatalogManager.UsingDatabase.DatabaseId + "'s folder")
 	}
@@ -56,17 +66,23 @@ func CreateTable(tableName string) error {
 //DropTable 拿到table的名字，同时通过cm获取当前正在使用的数据库名字，将table和table上的索引文件全部删除，不要忘了索引
 //没管 tablecatalog
 func DropTable(tableName string) error {
+	cmname:=CatalogManager.TableFilePrefix() + "_data/" + tableName
 	//删除所有的 index 文件
-	if err := IndexManager.DropAll(CatalogManager.TableFilePrefix() + "_data/" + tableName); err != nil {
+	if err := IndexManager.DropAll(cmname); err != nil {
 		return err
 	}
 	//删除table对应的record文件
-	if err := Utils.RemoveFile(CatalogManager.TableFilePrefix() + "_data/" + tableName); err != nil {
+	if err := Utils.RemoveFile(cmname); err != nil {
 		return err
 	}
 	//删除free list文件
-	if err := Utils.RemoveFile(CatalogManager.TableFilePrefix() + "_data/" + tableName + "_list"); err != nil {
+	if err := Utils.RemoveFile(cmname); err != nil {
 		return nil
+	}
+
+	FreeList=IndexManager.FreeList{} //重置Freelist
+	if err:=BufferManager.DeleteOldBlock(cmname);err!=nil{
+		return err
 	}
 	return nil
 }
@@ -246,31 +262,33 @@ func SelectRecordWithIndex(table *CatalogManager.TableCatalog, columns []string,
 	if err != nil {
 		return err, nil
 	}
-
-	for retNode != nil {
-		flag, record, err := getRecord(table, retNode.Pos)
-		if flag == false {
-			retNode = retNode.GetNext()
-			continue
-		}
-		if err != nil {
-			return err, nil
-		}
-		if flag, err := checkRow(record, where, colPos); err != nil || flag == false { //also need check
+	if retNode!=nil {   //初始的位置存在，则使用索引
+		for retNode != nil {
+			flag, record, err := getRecord(table, retNode.Pos)
+			if flag == false {
+				retNode = retNode.GetNext()
+				continue
+			}
 			if err != nil {
 				return err, nil
 			}
-			continue
+			if flag, err := checkRow(record, where, colPos); err != nil || flag == false { //also need check
+				if err != nil {
+					return err, nil
+				}
+				continue
+			}
+			ans, err := columnFilter(table, record, columns)
+			if err != nil {
+				return err, nil
+			}
+			ret = append(ret, ans)
+			retNode = retNode.GetNext()
 		}
-		ans, err := columnFilter(table, record, columns)
-		if err != nil {
-			return err, nil
-		}
-		ret = append(ret, ans)
-		retNode = retNode.GetNext()
+		//where maybe nil!!!!
+		return nil, ret
 	}
-	//where maybe nil!!!!
-	return nil, ret
+	return  SelectRecord(table,columns,where)
 }
 
 //DeleteRecord 传入delete的表，where表达式,无索引  int返回删除了多少行
@@ -341,7 +359,7 @@ func DeleteRecordWithIndex(table *CatalogManager.TableCatalog, where *types.Wher
 	colPos := getColPos(table, where)
 
 	indexinfo := IndexManager.IndexInfo{
-		Table_name:  table.TableName,
+		Table_name:  CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
 		Attr_name:   index.Left,
 		Attr_type:   table.ColumnsMap[index.Left].Type.TypeTag,
 		Attr_length: uint16(table.ColumnsMap[index.Left].Type.Length)}
@@ -350,46 +368,50 @@ func DeleteRecordWithIndex(table *CatalogManager.TableCatalog, where *types.Wher
 	if err != nil {
 		return err, cnt
 	}
-
-	for retNode != nil {
-		flag, record, err := getRecord(table, retNode.Pos)
-		if flag == false {
+	if retNode!=nil	 { //如果getFirst拿到了初始位置
+		for retNode != nil {
+			flag, record, err := getRecord(table, retNode.Pos)
+			if flag == false {
+				retNode = retNode.GetNext()
+				continue
+			}
+			if err != nil {
+				return err, cnt
+			}
+			if flag, err := checkRow(record, where, colPos); flag == false || err != nil {
+				if err != nil {
+					return err, cnt
+				}
+				continue
+			}
+			if err := deleteRecord(table, retNode.Pos); err != nil {
+				return err, cnt
+			}
+			FreeList.Positions = append(FreeList.Positions, retNode.Pos)
+			for _, indexItem := range table.Indexs {
+				indexinfo := IndexManager.IndexInfo{
+					Table_name:  CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
+					Attr_name:   indexItem.Keys[0].Name,
+					Attr_type:   table.ColumnsMap[indexItem.Keys[0].Name].Type.TypeTag,
+					Attr_length: uint16(table.ColumnsMap[indexItem.Keys[0].Name].Type.Length)}
+				val, err := columnFilter(table, record, []string{indexItem.Keys[0].Name})
+				if err != nil {
+					return err, cnt
+				}
+				if err := IndexManager.Delete(indexinfo, val.Values[0]); err != nil {
+					return err, cnt
+				}
+			}
 			retNode = retNode.GetNext()
-			continue
+			cnt++
 		}
-		if err != nil {
-			return err, cnt
-		}
-		if flag, err := checkRow(record, where, colPos); flag == false || err != nil {
-			if err != nil {
-				return err, cnt
-			}
-			continue
-		}
-		if err := deleteRecord(table, retNode.Pos); err != nil {
-			return err, cnt
-		}
-		FreeList.Positions = append(FreeList.Positions, retNode.Pos)
-		for _, indexItem := range table.Indexs {
-			indexinfo := IndexManager.IndexInfo{
-				Table_name:  CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
-				Attr_name:   indexItem.Keys[0].Name,
-				Attr_type:   table.ColumnsMap[indexItem.Keys[0].Name].Type.TypeTag,
-				Attr_length: uint16(table.ColumnsMap[indexItem.Keys[0].Name].Type.Length)}
-			val, err := columnFilter(table, record, []string{indexItem.Keys[0].Name})
-			if err != nil {
-				return err, cnt
-			}
-			if err := IndexManager.Delete(indexinfo, val.Values[0]); err != nil {
-				return err, cnt
-			}
-		}
-		retNode = retNode.GetNext()
-		cnt++
+		//where maybe nil!!!!
+		return nil, cnt
 	}
+	//索引条件无法找到起始位置（超出边界）
+	return DeleteRecord(table,where)
 
-	//where maybe nil!!!!
-	return nil, cnt
+
 }
 
 //UpdateRecord 传入update的表，准备更新的column，value数组，where参数 无索引 int返回删除了多少行
@@ -440,7 +462,7 @@ func UpdateRecordWithIndex(table *CatalogManager.TableCatalog, columns []string,
 	colPos := getColPos(table, where)
 
 	indexinfo := IndexManager.IndexInfo{
-		Table_name:  table.TableName,
+		Table_name: CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
 		Attr_name:   index.Left,
 		Attr_type:   table.ColumnsMap[index.Left].Type.TypeTag,
 		Attr_length: uint16(table.ColumnsMap[index.Left].Type.Length)}
@@ -449,32 +471,35 @@ func UpdateRecordWithIndex(table *CatalogManager.TableCatalog, columns []string,
 	if err != nil {
 		return err, cnt
 	}
+	 if retNode!=nil {
+		 for retNode != nil {
+			 flag, record, err := getRecord(table, retNode.Pos)
+			 if flag == false {
+				 retNode = retNode.GetNext()
+				 continue
+			 }
+			 if err != nil {
+				 return err, cnt
+			 }
+			 if flag, err := checkRow(record, where, colPos); flag == false || err != nil {
+				 if err != nil {
+					 return err, cnt
+				 }
+				 continue
+			 }
+			 bool, err := updateRecord(table, columns, values, retNode.Pos)
+			 if err != nil {
+				 return err, cnt
+			 }
+			 if bool == false {
+				 continue
+			 }
 
-	for retNode != nil {
-		flag, record, err := getRecord(table, retNode.Pos)
-		if flag == false {
-			retNode = retNode.GetNext()
-			continue
-		}
-		if err != nil {
-			return err, cnt
-		}
-		if flag, err := checkRow(record, where, colPos); flag == false || err != nil {
-			if err != nil {
-				return err, cnt
-			}
-			continue
-		}
-		bool, err := updateRecord(table, columns, values, retNode.Pos)
-		if err != nil {
-			return err, cnt
-		}
-		if bool == false {
-			continue
-		}
+			 retNode = retNode.GetNext()
+			 cnt++
+		 }
+		 return nil, cnt
+	 }
+	 return UpdateRecord(table,columns,values,where)
 
-		retNode = retNode.GetNext()
-		cnt++
-	}
-	return nil, 0
 }

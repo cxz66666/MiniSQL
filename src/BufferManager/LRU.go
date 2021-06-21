@@ -2,7 +2,7 @@ package BufferManager
 
 import "sync"
 
-const InitSize = 2048
+const InitSize = 1024
 
 type LRUList struct {
 	root Block  // dummy header

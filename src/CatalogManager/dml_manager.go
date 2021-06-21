@@ -30,7 +30,11 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 		for _,column:=range table.ColumnsMap {
 			pos:=column.ColumnPos
 			if !(pos<valueNumber && column.Type.TypeTag== statement.Values[pos].Convert2IntType()) {
-				return errors.New(fmt.Sprintf("column %s need a type %s, but your input value is %s",column.Name,ColumnType2StringName(column.Type.TypeTag),statement.Values[pos].String())),nil,nil
+				 if  item,ok:=statement.Values[pos].(value.Int);ok&&column.Type.TypeTag==Float64{ //是Int 同时列属性为float
+					statement.Values[pos]=value.Float{Val: float64(item.Val)} //将其转为Float值
+				 } else {
+					 return errors.New(fmt.Sprintf("column %s need a type %s, but your input value is %s",column.Name,ColumnType2StringName(column.Type.TypeTag),statement.Values[pos].String())),nil,nil
+				 }
 			}
 			startBytePos[column.ColumnPos]= column.StartBytesPos
 		}
@@ -48,7 +52,11 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 				return errors.New("don't have a column named "+colName+" ,please check your table"),nil,nil
 			}
 			if col.Type.TypeTag!=statement.Values[index].Convert2IntType() {
-				return errors.New(fmt.Sprintf("column %s need a type %s, but your input value is %s",col.Name,ColumnType2StringName(col.Type.TypeTag),statement.Values[index].String())),nil,nil
+				if  item,ok:=statement.Values[index].(value.Int);ok&&col.Type.TypeTag==Float64{ //是Int 同时列属性为float
+					statement.Values[index]=value.Float{Val: float64(item.Val)} //将其转为Float值
+				} else {
+					return errors.New(fmt.Sprintf("column %s need a type %s, but your input value is %s",col.Name,ColumnType2StringName(col.Type.TypeTag),statement.Values[index].String())),nil,nil
+				}
 			}
 			columnPositions=append(columnPositions,col.ColumnPos)
 			startBytePos=append(startBytePos,col.StartBytesPos)
@@ -107,12 +115,17 @@ func UpdateCheck(statement types.UpdateStament)  (error,[]string,[]value.Value, 
 	setColumns:=make([]string,0)
 	values:=make([]value.Value,0)
 	var column Column
-	for _,item:=range statement.SetExpr {
+	for i,item:=range statement.SetExpr {
 		if column,ok=table.ColumnsMap[item.Left];!ok {
 			return errors.New("don't have a column named "+item.Left),nil,nil,nil
 		}
 		if item.Right.Convert2IntType()!=column.Type.TypeTag {
-			return errors.New(fmt.Sprintf("column %s need a type %d, but your input value is %s",column.Name,column.Type.TypeTag,item.Right.String())),nil,nil,nil
+			if intitem,ok:=item.Right.(value.Int);ok&&column.Type.TypeTag==Float64{
+				statement.SetExpr[i].Right=value.Float{Val: float64(intitem.Val) }
+				item.Right=value.Float{Val: float64(intitem.Val) }
+			} else {
+				return errors.New(fmt.Sprintf("column %s need a type %d, but your input value is %s",column.Name,column.Type.TypeTag,item.Right.String())),nil,nil,nil
+			}
 		}
 		setColumns=append(setColumns,item.Left)
 		values=append(values,item.Right)

@@ -196,6 +196,9 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		// Switch to the next node
 		next_node_id := cur_node.getNext()
 		cur_node_block.FinishRead()
+		if next_node_id==0 {   //下一块还是初始块，直接返回没找到
+			return nil,nil
+		}
 		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
 		cur_node = next_node
 		cur_node_block = next_node_block

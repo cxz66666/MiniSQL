@@ -53,7 +53,28 @@ func CreateDatabase(databaseId string) error {
 	return FlushDbMeta()
 
 }
-
+//获取某数据库下的所有table信息，返回值为 TableCatalogMap
+func GetDBTablesMap(databaseId string)  (TableCatalogMap,error) {
+	if !ExistDatabase(databaseId) {
+		return nil,errors.New("database '"+databaseId+"' is not exist")
+	}
+	filePos:=DBCatalogPrefix()+databaseId
+	res:=make(TableCatalogMap)
+	f,err:=os.Open(filePos)
+	defer f.Close()
+	if err!=nil{
+		return nil,err
+	}
+	rd:=msgp.NewReader(f)
+	err=res.DecodeMsg(rd)
+	if err!=nil {
+		if _,ok:=err.(msgp.Error);ok{
+			return res,nil
+		}
+		return  nil,err
+	}
+	return res,nil
+}
 func UseDatabase(databaseId string) error  {
 	if !ExistDatabase(databaseId) {
 		return errors.New("database '"+databaseId+"' is not exist")

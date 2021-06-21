@@ -83,7 +83,9 @@ func BlockFlushAll() (bool, error) {
 	defer blockBuffer.Unlock()
 	for _, item := range blockBuffer.blockMap {
 		if item.dirty {
+			item.Lock()
 			err := item.flush()
+			item.Unlock()
 			if err != nil {
 				return false, err
 			}
@@ -91,6 +93,20 @@ func BlockFlushAll() (bool, error) {
 		item.reset()
 	}
 	return true, nil
+}
+//DeleteOldBlock 当删除某表时候，删除该表出现的block 首先要拿锁*
+func DeleteOldBlock(fileName string) error {
+	blockBuffer.Lock()
+	defer blockBuffer.Unlock()
+	for index, item := range blockBuffer.blockMap {
+		if item.filename==fileName {
+			item.Lock()
+			delete(blockBuffer.blockMap,index)
+			blockBuffer.root.remove(item)
+			item.Unlock()
+		}
+	}
+	return nil
 }
 //Query2Int 将filename和pos转为 buffer内部的int，如果不存在就创建
 func Query2Int(pos nameAndPos) int {
