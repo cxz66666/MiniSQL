@@ -9,6 +9,7 @@ import (
 	"minisql/src/CatalogManager"
 	"minisql/src/Interpreter/parser"
 	"minisql/src/Interpreter/types"
+	"minisql/src/RecordManager"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,13 @@ import (
 const historyCommmandFile="~/.minisql_history"
 const firstPrompt="minisql>"
 const secondPrompt="      ->"
+
+//FlushALl 结束时做的所有工作
+func FlushALl()  {
+	BufferManager.BlockFlushAll() //缓存block
+	RecordManager.FlushFreeList()  //free list写回
+	CatalogManager.FlushDatabaseMeta(CatalogManager.UsingDatabase.DatabaseId) //刷新记录长度和余量
+}
 
 func InitDB() error {
 	err:= CatalogManager.LoadDbMeta()
@@ -113,6 +121,7 @@ LOOP:
 					for _=range FinishChannel {
 
 					}
+					FlushALl();
 					r<-err
 					return
 				}

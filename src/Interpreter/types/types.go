@@ -278,7 +278,7 @@ func (e *ComparisonExprLSRV)Evaluate(row []value.Value)(bool,error)  {
 		}
 		return false, nil
 	}
-	return e.Right.SafeCompare(val,e.Operator)
+	return val.SafeCompare(e.Right,e.Operator)
 }
 func (e *ComparisonExprLSRV) GetTargetCols() []string {
 	return []string{e.Left}
@@ -374,7 +374,7 @@ func (e *ComparisonExprLSRS)Evaluate(row []value.Value)(bool,error)  {
 		}
 		return false, nil
 	}
-	return valr.SafeCompare(vall,e.Operator)
+	return vall.SafeCompare(valr,e.Operator)
 }
 func (e *ComparisonExprLSRS) GetTargetCols() []string {
 	return []string{e.Left,e.Right}

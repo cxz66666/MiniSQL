@@ -1,8 +1,6 @@
 package RecordManager
 
 import (
-	"bytes"
-	"encoding/binary"
 	"errors"
 	"minisql/src/BufferManager"
 	"minisql/src/Utils"
@@ -98,9 +96,9 @@ func getRecord(table *CatalogManager.TableCatalog, recordPosition dataNode) (boo
 	if err != nil {
 		return false, value.Row{}, err
 	}
-	nullmap := make([]bool, len(table.ColumnsMap)/8+1)
-	bytebuf := bytes.NewBuffer(data[:(len(table.ColumnsMap))/8+1])
-	binary.Read(bytebuf, binary.LittleEndian, &nullmap)
+	nullmapBytes:=data[0:len(table.ColumnsMap)/8+1]
+	nullmap:=Utils.BytesToBools(nullmapBytes)
+
 	if nullmap[0] == false {
 		return false, value.Row{}, nil
 	}
@@ -122,40 +120,19 @@ func getRecord(table *CatalogManager.TableCatalog, recordPosition dataNode) (boo
 	return true, record, nil
 }
 
-func boolsToBytes(t []bool) []byte {
-	b := make([]byte, (len(t)+7)/8)
-	for i, x := range t {
-		if x {
-			b[i/8] |= 0x80 >> uint(i%8)
-		}
-	}
-	return b
-}
-
-func bytesToBools(b []byte) []bool {
-	t := make([]bool, 8*len(b))
-	for i, x := range b {
-		for j := 0; j < 8; j++ {
-			if (x<<uint(j))&0x80 == 0x80 {
-				t[8*i+j] = true
-			}
-		}
-	}
-	return t
-}
 
 func setRecord(table *CatalogManager.TableCatalog, recordPosition dataNode,
 	columnPos []int, startBytePos []int, values []value.Value) error {
 	data := make([]byte, table.RecordLength)
 	nullmapBytes:=data[0:len(table.ColumnsMap)/8+1]
-	nullmap:=bytesToBools(nullmapBytes)
+	nullmap:=Utils.BytesToBools(nullmapBytes)
 	nullmap[0] = true
 	for _, columnIndex := range columnPos {
 		nullmap[columnIndex+1] = true
 	}
-	nullmapBytes=boolsToBytes(nullmap)
+	nullmapBytes=Utils.BoolsToBytes(nullmap)
 
-	copy(data[:(len(table.ColumnsMap))/8+1], nullmapBytes)
+	copy(data[:], nullmapBytes)
 	for index, _ := range columnPos {
 		tmp, err := values[index].Convert2Bytes()
 		if err != nil {
@@ -212,30 +189,33 @@ func deleteRecord(table *CatalogManager.TableCatalog, recordPosition dataNode) e
 	if err != nil {
 		return err
 	}
-	nullmap := make([]bool, len(table.ColumnsMap)+1)
-	bytebuf := bytes.NewBuffer(data[:(len(table.ColumnsMap)+1)/8])
-	binary.Read(bytebuf, binary.LittleEndian, &nullmap)
-	nullmap[0] = true
-	bytebuf = bytes.NewBuffer([]byte{})
-	binary.Write(bytebuf, binary.LittleEndian, nullmap)
-	copy(data[:(len(table.ColumnsMap)+1)/8], bytebuf.Bytes())
+	nullmapBytes:=data[0:len(table.ColumnsMap)/8+1]
+	nullmap:=Utils.BytesToBools(nullmapBytes)
+
+
+	nullmap[0] = false //变成可用
+
+	nullmapBytes=Utils.BoolsToBytes(nullmap)
+	copy(data[:], nullmapBytes)
 
 	table.RecordCnt--
 	return nil
 }
 func updateRecordData(table *CatalogManager.TableCatalog, recordPosition dataNode, record value.Row) error {
 	data := make([]byte, table.RecordLength)
-	nullmap := make([]bool, len(table.ColumnsMap)/8+1)
+	//位图
+	nullmap := make([]bool, len(table.ColumnsMap)+1)
 	nullmap[0] = true
-
+  //设置为true
 	for i, val := range record.Values {
 		if val.Convert2IntType() != value.NullType {
 			nullmap[i+1] = true
 		}
 	}
-	bytebuf := bytes.NewBuffer([]byte{})
-	binary.Write(bytebuf, binary.LittleEndian, nullmap)
-	copy(data[:(len(table.ColumnsMap))/8+1], bytebuf.Bytes())
+	//设置位bytes
+	nullbytes:=Utils.BoolsToBytes(nullmap)
+
+	copy(data[:],nullbytes)
 	for i, value := range record.Values {
 		tmp, err := value.Convert2Bytes()
 		if err != nil {
@@ -259,7 +239,7 @@ func updateRecord(table *CatalogManager.TableCatalog, columns []string, values [
 	if err != nil {
 		return false, err
 	}
-	if flag != false {
+	if flag == false {
 		return false, nil
 	}
 	//删除旧index

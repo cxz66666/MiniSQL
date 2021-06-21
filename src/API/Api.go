@@ -56,11 +56,22 @@ func HandleOneParse( dataChannel <-chan types.DStatements,stopChannel chan<- str
 }
 //CreateDatabaseAPI 只调用CM，和IM、RM无关
 func CreateDatabaseAPI(statement types.CreateDatabaseStatement)  error {
-	return CatalogManager.CreateDatabase(statement.DatabaseId)
+
+	err:= CatalogManager.CreateDatabase(statement.DatabaseId)
+	if err!=nil {
+		return err
+	}
+	fmt.Println("create datbase success.")
+	return nil
 }
 //UseDatabaseAPI 只调用CM，和IM、RM无关
 func UseDatabaseAPI(statement types.UseDatabaseStatement) error  {
-	return CatalogManager.UseDatabase(statement.DatabaseId)
+	err:= CatalogManager.UseDatabase(statement.DatabaseId)
+	if err!=nil{
+		return err
+	}
+	fmt.Printf("now you are using %s database.\n",statement.DatabaseId)
+	return nil
 }
 //DropDatabaseAPI  先CM的check，和IM、RM无关 ，再调用RM的drop ， 再在CM中删除并flush
 func DropDatabaseAPI(statement types.DropDatabaseStatement) error  {
@@ -72,7 +83,12 @@ func DropDatabaseAPI(statement types.DropDatabaseStatement) error  {
 	if err!=nil {
 		return err
 	}
-	return CatalogManager.DropDatabase(statement.DatabaseId)
+	err= CatalogManager.DropDatabase(statement.DatabaseId)
+	if err!=nil	{
+		return err
+	}
+	fmt.Printf("drop database %s succes.\n",statement.DatabaseId)
+	return nil
 }
 
 //CreateTableAPI CM进行检查，index检查 语法检查  之后调用RM中的CreateTable创建表， 之后使用RM中的CreateIndex建索引
@@ -92,6 +108,10 @@ func CreateTableAPI(statement types.CreateTableStatement) error {
 		}
 	}
 	err=CatalogManager.FlushDatabaseMeta(CatalogManager.UsingDatabase.DatabaseId)
+	if err!=nil {
+		return err
+	}
+	fmt.Printf("create table %s succes.\n",statement.TableName)
 	return err
 }
 
@@ -101,7 +121,12 @@ func CreateIndexAPI(statement types.CreateIndexStatement) error  {
 	if err!=nil {
 		return err
 	}
-	return RecordManager.CreateIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableName),*indexCatalog)
+	err= RecordManager.CreateIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableName),*indexCatalog)
+	if err!=nil{
+		return err
+	}
+	fmt.Printf("create index %s succes.\n",statement.IndexName)
+	return nil
 }
 
 //DropTableAPI CM进行检查，注意这个时候并不真正删除CM中的记录， 之后RM的DropTable删除table文件以及index文件， 之后让CM删除map中的记录同时flush
@@ -114,7 +139,12 @@ func DropTableAPI(statement types.DropTableStatement) error  {
 	if err!=nil {
 		return err
 	}
-	return CatalogManager.DropTable(statement)
+	err= CatalogManager.DropTable(statement)
+	if err!=nil	{
+		return err
+	}
+	fmt.Printf("drop table %s succes.\n",statement.TableName)
+	return nil
 }
 //DropIndexAPI CM进行检查， RM中删除index 之后CM中再删除并flush
 func DropIndexAPI(statement types.DropIndexStatement) error  {
@@ -126,7 +156,12 @@ func DropIndexAPI(statement types.DropIndexStatement) error  {
 	if err!=nil {
 		return err
 	}
-	return CatalogManager.DropIndex(statement)
+	err= CatalogManager.DropIndex(statement)
+	if err!=nil {
+		return err
+	}
+	fmt.Printf("drop index %s succes.\n",statement.IndexName)
+	return nil
 }
 
 
@@ -136,7 +171,11 @@ func InsertAPI(statement types.InsertStament) error  {
 		return err
 	}
 	err=RecordManager.InsertRecord(CatalogManager.GetTableCatalogUnsafe(statement.TableName),colPos,startBytePos,statement.Values)
-	return err
+	if err!=nil{
+		return err
+	}
+	fmt.Printf("insert success, 1 row affected.\n")
+	return nil
 }
 
 func UpdateAPI(statement types.UpdateStament) error  {
@@ -153,7 +192,7 @@ func UpdateAPI(statement types.UpdateStament) error  {
 	if err!=nil {
 		return err
 	}
-	fmt.Println(rowNum)
+	fmt.Printf("update success, %d rows are updated.\n",rowNum)
 	return nil
 }
 
@@ -168,7 +207,11 @@ func DeleteAPI(statement types.DeleteStatement) error {
 	} else {
 		err,rowNum=RecordManager.DeleteRecordWithIndex(CatalogManager.GetTableCatalogUnsafe(statement.TableName),statement.Where,*exprLSRV)
 	}
-	fmt.Println(rowNum)
+	if err!=nil {
+		return err
+	}
+
+	fmt.Printf("delete success, %d rows are deleted.\n",rowNum)
 	return  nil
 }
 

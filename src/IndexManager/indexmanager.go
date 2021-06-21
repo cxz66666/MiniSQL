@@ -253,6 +253,7 @@ func Create(info IndexInfo) error {
 		//fmt.Println(err)
 		return err
 	}
+
 	return nil
 }
 

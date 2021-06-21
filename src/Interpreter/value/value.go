@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"minisql/src/Utils"
 )
 //go:generate msgp
 
@@ -175,91 +176,24 @@ func (i Bytes) String() string {
 }
 
 func (i Bytes)Compare(v Value,op CompareType)(bool,error) {
-	v_val:=(v).(Bytes).Val[:]
-	v_len:=len(v_val)
-	i_len:=len(i.Val)
+
+	i_str:=Utils.CString(i.Val)
+	v_str:=Utils.CString((v).(Bytes).Val)
 	switch op {
 	case Great:
-		for index,item:=range i.Val{
-			if index+ 1<=v_len&&item>v_val[index]{
-				return true,nil
-			} else if  index+ 1<=v_len&&item<v_val[index] {
-				return false,nil
-			} else if index+1>v_len{
-				return true,nil
-			}
-		}
-		if v_len==i_len{
-			return false,nil
-		}
-		return false,nil
+		return i_str>v_str,nil
 	case GreatEqual:
-
-		for index,item:=range i.Val{
-			if index+ 1<=v_len&&item>v_val[index]{
-				return true,nil
-			} else if  index+ 1<=v_len&&item<v_val[index] {
-				return false,nil
-			} else if index+1>v_len{
-				return true,nil
-			}
-		}
-		if i_len==v_len{
-			return true,nil
-		}
-		return false,nil
+		return i_str>=v_str,nil
 	case Less:
-		for index,item:=range i.Val{
-			if index+ 1<=v_len&&item<v_val[index]{
-				return true,nil
-			} else if  index+ 1<=v_len&&item>v_val[index] {
-				return false,nil
-			} else if index+1>v_len{
-				return false,nil
-			}
-		}
-		if i_len==v_len{
-			return false,nil
-		}
-		return false,nil
+
+		return i_str<v_str,nil
 	case LessEqual:
-		for index,item:=range i.Val{
-			if index+ 1<=v_len&&item<v_val[index]{
-				return true,nil
-			} else if  index+ 1<=v_len&&item>v_val[index] {
-				return false,nil
-			} else if index+1>v_len{
-				return false,nil
-			}
-		}
-		if i_len==v_len{
-			return true,nil
-		}
-		return false,nil
+
+		return i_str<=v_str,nil
 	case Equal:
-		if v_len!=i_len {
-			return  false,nil
-		}
-		for index,item:=range i.Val{
-			if index+ 1<=v_len&&item!=v_val[index]{
-				return false,nil
-			} else if index+1>v_len{
-				return false,nil
-			}
-		}
-		return true,nil
+		return i_str==v_str,nil
 	case NotEqual:
-		for index,item:=range i.Val{
-			if index+ 1<=v_len&&item!=v_val[index]{
-				return true,nil
-			} else if index+1>v_len{
-				return true,nil
-			}
-		}
-		if(i_len==v_len){
-			return false,nil
-		}
-		return true,nil
+		return i_str!=v_str,nil
 	}
 	return false,fmt.Errorf("unknow operation type %d", op)
 }

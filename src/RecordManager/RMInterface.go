@@ -204,7 +204,7 @@ func SelectRecord(table *CatalogManager.TableCatalog, columns []string, where *t
 	totalBlockNum, _ := BufferManager.GetBlockNumber(CatalogManager.TableFilePrefix() + "_data/"+table.TableName)
 	for blockId := uint16(0); blockId < totalBlockNum; blockId++ {
 		for offset := uint16(0); (offset+1)*uint16(table.RecordLength) < BufferManager.BlockSize; offset += uint16(1) {
-			if BufferManager.BlockSize/uint16(table.RecordLength)*blockId+offset > uint16(table.RecordTotal) {
+			if BufferManager.BlockSize/table.RecordLength*int(blockId)+int(offset) >= table.RecordTotal {
 				break
 			}
 			flag, record, err := getRecord(table, dataNode{Block: blockId, Offset: offset})
@@ -286,7 +286,7 @@ func DeleteRecord(table *CatalogManager.TableCatalog, where *types.Where) (error
 			pos := dataNode{
 				Block:  blockId,
 				Offset: offset}
-			if BufferManager.BlockSize/uint16(table.RecordLength)*blockId+offset > uint16(table.RecordTotal) {
+			if BufferManager.BlockSize/table.RecordLength*int(blockId)+int(offset) >= table.RecordTotal {
 				break
 			}
 			flag, record, err := getRecord(table, dataNode{Block: blockId, Offset: offset})
@@ -402,7 +402,7 @@ func UpdateRecord(table *CatalogManager.TableCatalog, columns []string, values [
 				Block:  blockId,
 				Offset: offset,
 			}
-			if BufferManager.BlockSize/uint16(table.RecordLength)*blockId+offset > uint16(table.RecordTotal) {
+			if BufferManager.BlockSize/table.RecordLength*int(blockId)+int(offset) >= table.RecordTotal{
 				break
 			}
 			flag, record, err := getRecord(table, dataNode{Block: blockId, Offset: offset})
