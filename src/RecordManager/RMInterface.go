@@ -117,6 +117,7 @@ func DropIndex(table *CatalogManager.TableCatalog, indexName string) error {
 
 //InsertRecord 传入cm中table的引用， columnPos传入插入哪些列，其值为column在table中的第几个   startBytePos 传入开始byte的集合，分别代表每个value代表的数据从哪个byte开始存（已经加上valid位和null位），values为value数组
 func InsertRecord(table *CatalogManager.TableCatalog, columnPos []int, startBytePos []int, values []value.Value) error {
+	tableNameWithPrefix:= CatalogManager.TableFilePrefix() + "_data/" + table.TableName
 	//首先检查 unique限制
 	err := loadFreeList(table.TableName)
 	if err != nil {
@@ -129,19 +130,19 @@ func InsertRecord(table *CatalogManager.TableCatalog, columnPos []int, startByte
 		for i, pos := range columnPos {
 			//随后做index优化
 			if column.ColumnPos == pos {
-				checkCondition := types.ComparisonExprLVRS{
-					Right:    column.Name,
-					Operator: value.Equal,
-					Left:     values[i],
-				}
-				where := types.Where{
-					Expr: &checkCondition,
-				}
-				err, ans := SelectRecord(table, []string{column.Name}, &where)
+			//这里默认 所有unique上面  都有索引！！！！！！！
+
+				indexinfo := IndexManager.IndexInfo{
+					Table_name: tableNameWithPrefix,
+					Attr_name:   column.Name,
+					Attr_type:   column.Type.TypeTag,
+					Attr_length: uint16(column.Type.Length)}
+
+				retNode, err := IndexManager.GetFirst(indexinfo,values[i], value.Equal)
 				if err != nil {
 					return err
 				}
-				if len(ans) != 0 {
+				if retNode!=nil {;
 					return errors.New(column.Name + " uniuqe conflict")
 				}
 				break
@@ -172,7 +173,7 @@ func InsertRecord(table *CatalogManager.TableCatalog, columnPos []int, startByte
 	//加index
 	for _, index := range table.Indexs {
 		indexinfo := IndexManager.IndexInfo{
-			Table_name:  CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
+			Table_name:  tableNameWithPrefix,
 			Attr_name:   index.Keys[0].Name,
 			Attr_type:   table.ColumnsMap[index.Keys[0].Name].Type.TypeTag,
 			Attr_length: uint16(table.ColumnsMap[index.Keys[0].Name].Type.Length)}

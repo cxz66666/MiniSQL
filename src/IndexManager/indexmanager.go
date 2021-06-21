@@ -158,8 +158,8 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 				}
 			}
 			next_node_id := cur_node.getPointer(i)
-			next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
 			cur_node_block.FinishRead()
+			next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
 			cur_node = next_node
 			cur_node_block = next_node_block
 		}
@@ -167,8 +167,8 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		// Get the first leaf of all leaves
 		for cur_node.isLeaf() == 0 {
 			next_node_id := cur_node.getPointer(0)
-			next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
 			cur_node_block.FinishRead()
+			next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
 			cur_node = next_node
 			cur_node_block = next_node_block
 		}
@@ -195,8 +195,8 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		}
 		// Switch to the next node
 		next_node_id := cur_node.getNext()
-		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
 		cur_node_block.FinishRead()
+		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
 		cur_node = next_node
 		cur_node_block = next_node_block
 		if cur_node.isLeaf() == 0 {
@@ -239,7 +239,7 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 			break
 		}
 	}
-
+	cur_node_block.FinishRead()
 	return dummy_head.next_node, nil
 }
 
