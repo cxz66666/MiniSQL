@@ -1,10 +1,12 @@
 package BufferManager
 
 import (
+	"fmt"
 	"os"
 	"sync"
 )
 
+const GOFlushNum=10  //最多多少协程同时flush
 const BlockSize = 4096 // for debug
 var blockBuffer *LRUCache
 var connector = "*"
@@ -70,29 +72,47 @@ func NewBlock(filename string) (uint16, error) {
 		blockid:  block_id,
 		filename: filename,
 		Data:     make([]byte, BlockSize),
-		dirty:    true,
 	}
+	newBlock.SetDirty()
 	newBlock.flush()
 	t := Query2Int(nameAndPos{fileName: filename, blockId: block_id})
 	blockBuffer.PutBlock(&newBlock, t)
 	return block_id, nil
 }
-//BlockFlushAll 刷新所有块，一般不使用，该过程不拿锁，所以可能存在冲突！！
+//BlockFlushAll 刷新所有块，一般不使用，拿锁， 同时协程处理
 func BlockFlushAll() (bool, error) {
 	blockBuffer.Lock()
 	defer blockBuffer.Unlock()
-	for _, item := range blockBuffer.blockMap {
-		if item.dirty {
-			item.Lock()
-			err := item.flush()
-			item.Unlock()
-			if err != nil {
-				return false, err
+	flushChannel := make(chan int)
+	for i:=0;i<GOFlushNum;i++ {   //开启GOFlushNum个处理协程
+		go func(channel chan int) {
+			for id:=range channel {
+				item:=blockBuffer.blockMap[id];
+				item.Lock()
+				item.flush()
+				item.reset()
+				item.Unlock()
 			}
+		}(flushChannel)
+	}
+	for index, item := range blockBuffer.blockMap {
+		if item.dirty {
+				flushChannel<-index  //传入key
 		}
-		item.reset()
 	}
 	return true, nil
+}
+//BeginBlockFlush 每次结束一条指令后 channel接收指令并且开始刷新
+func BeginBlockFlush(channel chan struct{})  {
+	for _=range channel {
+		if 2*TotalDirtyBlock<len(blockBuffer.blockMap) {
+			continue
+		}
+		_,err:= BlockFlushAll()
+		if err!=nil	 {
+			fmt.Println(err)
+		}
+	}
 }
 //DeleteOldBlock 当删除某表时候，删除该表出现的block 首先要拿锁*
 func DeleteOldBlock(fileName string) error {

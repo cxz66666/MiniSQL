@@ -16,10 +16,10 @@ import (
 )
 
 var FreeList IndexManager.FreeList
-
+const freeListFileHotFix="_list"
 //每次insert前都进行load
 func loadFreeList(tableName string) error {
-	fileName := CatalogManager.TableFilePrefix() + "_data/" + tableName + "_list" //文件名
+	fileName := CatalogManager.TableFilePrefix() + "_data/" + tableName + freeListFileHotFix //文件名
 	if FreeList.Name == fileName {                                                  //已经load了
 		return nil
 	} else if len(FreeList.Name) > 0 {//需要把旧的flush
@@ -197,7 +197,7 @@ func deleteRecord(table *CatalogManager.TableCatalog, recordPosition dataNode) e
 
 	nullmapBytes=Utils.BoolsToBytes(nullmap)
 	copy(data[:], nullmapBytes)
-
+	setRecordData(table.TableName,recordPosition,data,table.RecordLength)
 	table.RecordCnt--
 	return nil
 }

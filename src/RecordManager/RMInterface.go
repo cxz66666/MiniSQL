@@ -76,11 +76,13 @@ func DropTable(tableName string) error {
 		return err
 	}
 	//删除free list文件
-	if err := Utils.RemoveFile(cmname); err != nil {
+	if err := Utils.RemoveFile(cmname+freeListFileHotFix); err != nil {
 		return nil
 	}
-
-	FreeList=IndexManager.FreeList{} //重置Freelist
+	if tableName==FreeList.Name{
+		FreeList=IndexManager.FreeList{} //重置Freelist
+	}
+	//BM中删除该块
 	if err:=BufferManager.DeleteOldBlock(cmname);err!=nil{
 		return err
 	}
@@ -101,6 +103,26 @@ func CreateIndex(table *CatalogManager.TableCatalog, newIndex CatalogManager.Ind
 		return err
 	}
 
+	totalBlockNum, _ := BufferManager.GetBlockNumber(CatalogManager.TableFilePrefix() + "_data/"+table.TableName)
+	columnPos:=indexColumn.ColumnPos
+	for blockId := uint16(0); blockId < totalBlockNum; blockId++ {
+		for offset := uint16(0); (offset+1)*uint16(table.RecordLength) < BufferManager.BlockSize; offset += uint16(1) {
+			if BufferManager.BlockSize/table.RecordLength*int(blockId)+int(offset) >= table.RecordTotal {
+				break
+			}
+			pos:=dataNode{Block: blockId, Offset: offset}
+			flag, record, err := getRecord(table, pos)
+			if flag == false {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			if err = IndexManager.Insert(indexinfo, record.Values[columnPos], pos); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -108,12 +130,12 @@ func CreateIndex(table *CatalogManager.TableCatalog, newIndex CatalogManager.Ind
 func DropIndex(table *CatalogManager.TableCatalog, indexName string) error {
 
 	var indexColumn CatalogManager.Column
-	//删除 table Catalog 里面的index索引
-	for i, index := range table.Indexs {
+	//将删除table中索引放到API调CM完成
+	for _, index := range table.Indexs {
 		if index.IndexName == indexName {
 			indexColumn = table.ColumnsMap[index.Keys[0].Name]
-			table.Indexs[i] = table.Indexs[len(table.Indexs)-1]
-			table.Indexs = table.Indexs[:len(table.Indexs)-1]
+			//table.Indexs[i] = table.Indexs[len(table.Indexs)-1]
+			//table.Indexs = table.Indexs[:len(table.Indexs)-1]
 			break
 		}
 	}
@@ -140,27 +162,45 @@ func InsertRecord(table *CatalogManager.TableCatalog, columnPos []int, startByte
 		return err
 	}
 	for _, column := range table.ColumnsMap {
-		if !column.Unique {
+		if !column.Unique {  //非unique不处理
 			continue
 		}
-		for i, pos := range columnPos {
+		for i, pos := range columnPos { //找到插入数据中的这一列
 			//随后做index优化
 			if column.ColumnPos == pos {
-			//这里默认 所有unique上面  都有索引！！！！！！！
+			//开始判断是否这个unique上有索引
+				var foundIndex=false
+				for _,index:=range  table.Indexs {
+					if index.Keys[0].Name==column.Name {
+						indexinfo := IndexManager.IndexInfo{
+							Table_name: tableNameWithPrefix,
+							Attr_name:   column.Name,
+							Attr_type:   column.Type.TypeTag,
+							Attr_length: uint16(column.Type.Length)}
 
-				indexinfo := IndexManager.IndexInfo{
-					Table_name: tableNameWithPrefix,
-					Attr_name:   column.Name,
-					Attr_type:   column.Type.TypeTag,
-					Attr_length: uint16(column.Type.Length)}
-
-				retNode, err := IndexManager.GetFirst(indexinfo,values[i], value.Equal)
-				if err != nil {
-					return err
+						retNode, err := IndexManager.GetFirst(indexinfo,values[i], value.Equal)
+						if err != nil {
+							return err
+						}
+						if retNode!=nil {;
+							return errors.New(column.Name + " uniuqe conflict")
+						}
+						foundIndex=true //已经用过索引进行处理了
+						break
+					}
 				}
-				if retNode!=nil {;
-					return errors.New(column.Name + " uniuqe conflict")
+				//没有索引
+				if !foundIndex{
+					where:= types.Where{Expr: &types.ComparisonExprLSRV{Left: column.Name,Operator: value.Equal,Right:values[i] } }//构造where表达式
+					err,rows:=SelectRecord(table,make([]string,0),&where) //进行全表搜索
+					if err!=nil {
+						return err
+					}
+					if len(rows)!=0 {
+						return errors.New(column.Name + " uniuqe conflict")
+					}
 				}
+				//处理到这一步就表示这个column符合unique的条件
 				break
 			}
 		}

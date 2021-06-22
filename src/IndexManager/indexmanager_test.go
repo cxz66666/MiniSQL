@@ -118,9 +118,8 @@ func TestSearch(t *testing.T) {
 	for i := 1; i <= 12; i++ {
 		Insert(info, value.Int{Val: int64(i)}, Position{uint16(2*i - 1), uint16(2 * i)})
 	}
-	Delete(info, value.Int{Val: 5})
 	printAll()
-	header, _ := GetFirst(info, value.Int{Val: 5}, value.LessEqual)
+	header, _ := GetFirst(info, value.Int{Val: 1}, value.Great)
 	for header != nil {
 		fmt.Println(header.Pos)
 		header = header.GetNext()
@@ -138,14 +137,4 @@ func shuffle(arr []int) {
 		arr[i] = arr[j]
 		arr[j] = temp
 	}
-}
-
-func TestSplit(t *testing.T) {
-	BufferManager.InitBuffer()
-	os.Create("../BufferManager/student_name.index")
-	filename := info.getFileName()
-	node_id, _ := BufferManager.NewBlock(filename)
-	node, _ := getBpNode(filename, node_id, info.Attr_length)
-	node.nodeInit()
-	node.print()
 }

@@ -452,12 +452,9 @@ func (e *OrExpr)Debug() {
 	e.Right.Debug()
 
 }
+// 注意 如果是or表达式 直接返回false，因此没法走单索引
 func (e *OrExpr)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
-	b,c:=e.Left.GetIndexExpr(indexName)
-	if b==true {
-		return b,c
-	}
-	return e.Right.GetIndexExpr(indexName)
+	return false,nil
 }
 
 func (e *NotExpr) Evaluate(row []value.Value) (bool, error) {

@@ -3,10 +3,10 @@ package IndexManager
 import (
 	"minisql/src/BufferManager"
 	"minisql/src/Interpreter/value"
+	"minisql/src/Utils"
 	"os"
 	"path/filepath"
 )
-
 
 //go:generate msgp
 type bpNode struct {
@@ -21,9 +21,10 @@ type Position struct {
 }
 
 type FreeList struct {
-	Name string
+	Name      string
 	Positions []Position
 }
+
 /*
  * 由 IndexInfo 唯一确定了一个 index，
  * 因为我没法调用 CM，感觉这些都是必要的？
@@ -183,6 +184,9 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 	// Find the first node that satisfy the condition
 	for {
 		n := cur_node.getSize()
+		if n == 0 {
+			break
+		}
 		for j := uint16(0); j < n; j++ {
 			if res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value, compare_type); res {
 				begin = true
@@ -196,8 +200,8 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		// Switch to the next node
 		next_node_id := cur_node.getNext()
 		cur_node_block.FinishRead()
-		if next_node_id==0 {   //下一块还是初始块，直接返回没找到
-			return nil,nil
+		if next_node_id == 0 {
+			return nil, nil
 		}
 		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
 		cur_node = next_node
@@ -208,12 +212,16 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		}
 	}
 	if !begin {
+		cur_node_block.FinishRead() //IMPORTANT!!
 		return nil, nil
 	}
 
-	end := false
 	for {
+		end := false
 		n := cur_node.getSize()
+		if n == 0 {
+			break
+		}
 		for j := i; j < n; j++ {
 			if res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value, compare_type); !res {
 				end = true
@@ -237,7 +245,7 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		cur_node = next_node
 		cur_node_block = next_node_block
 		i = 0
-		if cur_node.isLeaf() == 0 {
+		if next_node_id == 0 {
 			// Search to the end
 			break
 		}
@@ -253,8 +261,9 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 func Create(info IndexInfo) error {
 	// Create file
 	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
-	if _, err := os.Create(filename); err != nil {
-		//fmt.Println(err)
+	f,err:=Utils.CreateFile(filename)
+	defer f.Close()
+	if err!=nil	 {
 		return err
 	}
 
@@ -268,9 +277,9 @@ func Create(info IndexInfo) error {
 
 //删除 index
 func Drop(info IndexInfo) error {
-	// Create file
+	// Drop file with explicit filename
 	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
-	if err := os.Remove(filename); err != nil {
+	if err := Utils.RemoveFile(filename); err != nil {
 		//fmt.Println(err)
 		return err
 	}
@@ -279,11 +288,11 @@ func Drop(info IndexInfo) error {
 
 //
 func DropAll(tableName string) error {
-	files, err := filepath.Glob(tableName+"_*");
+	files, err := filepath.Glob(tableName + "_*")
 	if err != nil {
 		return err
 	}
-	for _, f := range (files) {
+	for _, f := range files {
 		if err := os.Remove(f); err != nil {
 			return err
 		}

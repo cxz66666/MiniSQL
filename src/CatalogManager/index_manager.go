@@ -24,6 +24,9 @@ func CreateIndexCheck(statement types.CreateIndexStatement) (error,*IndexCatalog
 		if _,ok=table.ColumnsMap[key.Name];!ok {
 			return errors.New("table "+table.TableName+ " don't have a column named "+key.Name),nil
 		}
+		if table.ColumnsMap[key.Name].Unique==false {
+			return errors.New("You must create a index on a unique column."),nil
+		}
 	}
 	return nil,newIndexCatalog
 }

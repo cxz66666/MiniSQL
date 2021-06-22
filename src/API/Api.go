@@ -47,7 +47,9 @@ func HandleOneParse( dataChannel <-chan types.DStatements,stopChannel chan<- str
 		case types.ExecFile:
 			err=ExecFileAPI(statement.(types.ExecFileStatement))
 		}
-		fmt.Println(err)
+		if err!=nil {
+			fmt.Println(err)
+		}
 		stopChannel<- struct{}{}
 	}
 	fmt.Println(err)
@@ -124,6 +126,10 @@ func CreateIndexAPI(statement types.CreateIndexStatement) error  {
 	if err!=nil{
 		return err
 	}
+	err=CatalogManager.FlushDatabaseMeta(CatalogManager.UsingDatabase.DatabaseId)
+	if err!=nil {
+		return err
+	}
 	fmt.Printf("create index %s succes.\n",statement.IndexName)
 	return nil
 }
@@ -142,6 +148,10 @@ func DropTableAPI(statement types.DropTableStatement) error  {
 	if err!=nil	{
 		return err
 	}
+	err=CatalogManager.FlushDatabaseMeta(CatalogManager.UsingDatabase.DatabaseId)
+	if err!=nil {
+		return err
+	}
 	fmt.Printf("drop table %s succes.\n",statement.TableName)
 	return nil
 }
@@ -156,6 +166,10 @@ func DropIndexAPI(statement types.DropIndexStatement) error  {
 		return err
 	}
 	err= CatalogManager.DropIndex(statement)
+	if err!=nil {
+		return err
+	}
+	err=CatalogManager.FlushDatabaseMeta(CatalogManager.UsingDatabase.DatabaseId)
 	if err!=nil {
 		return err
 	}
