@@ -3,7 +3,7 @@ package parser
 
 import (
     "strconv"
-	"minisql/src/Interpreter/value"
+	"minisql/src/Interpreter/Value"
 	"minisql/src/Interpreter/types"
 )
 %}
@@ -32,9 +32,9 @@ import (
   expr   types.Expr
   where     *types.Where
   limit     types.Limit
-  compare   value.CompareType
-  valuetype value.Value
-  valuetypelist []value.Value
+  compare   Value.CompareType
+  valuetype Value.Value
+  valuetypelist []Value.Value
   setexpr    types.SetExpr
   setexprlist []types.SetExpr
 }
@@ -88,7 +88,7 @@ import (
 %type<expr>  expr_opt
 %type<limit> limit_opt
 %type<compare> compare_type
-%type<valuetype> value
+%type<valuetype> Value
 %type<int> int_value
 %type<where> where_opt
 %type<setexpr> set_opt
@@ -484,7 +484,7 @@ set_opt_list:
     $$ = append($1, $3)
   }
 set_opt:
-  IDENT_LEGAL '=' value
+  IDENT_LEGAL '=' Value
   {
     $$=types.SetExpr{
     	Left: $1,
@@ -550,15 +550,15 @@ expr_opt:
     {
     	$$=$2
     }
-    | IDENT_ALL compare_type value
+    | IDENT_ALL compare_type Value
     {
 	$$= &types.ComparisonExprLSRV{Left: $1,Operator:$2, Right:$3 }
     }
-    |  value compare_type IDENT_ALL
+    |  Value compare_type IDENT_ALL
     {
 	$$= &types.ComparisonExprLVRS{Left: $1,Operator:$2, Right:$3 }
     }
-    |  value compare_type value
+    |  Value compare_type Value
     {
 	$$= &types.ComparisonExprLVRV{Left: $1,Operator:$2, Right:$3 }
     }
@@ -585,51 +585,51 @@ expr_opt:
     }
 
 value_list:
-  value
+  Value
   {
-    $$ = make([]value.Value, 0, 1)
+    $$ = make([]Value.Value, 0, 1)
     $$ = append($$, $1)
   }
-  | value_list ',' value
+  | value_list ',' Value
   {
     $$ = append($1, $3)
   }
 
-value:
+Value:
     {
-    $$=value.Bytes{}
+    $$=Value.Bytes{}
     }
     | string_value
     {
-    $$=value.Bytes{Val:[]byte($1)}
+    $$=Value.Bytes{Val:[]byte($1)}
     }
     | int64_value
     {
-    $$=value.Int{Val:$1}
+    $$=Value.Int{Val:$1}
     }
     | float64_value
     {
-    $$=value.Float{Val:$1}
+    $$=Value.Float{Val:$1}
     }
     | TRUE
     {
-    $$=value.Bool{Val:true}
+    $$=Value.Bool{Val:true}
     }
     | FALSE
     {
-    $$=value.Bool{Val:false}
+    $$=Value.Bool{Val:false}
     }
     | NULL
     {
-    $$=value.Null{}
+    $$=Value.Null{}
     }
 compare_type:
- '=' {$$= value.Equal}
- | '<' {$$ = value.Less}
- | '>' {$$ = value.Great}
- | LE { $$ = value.LessEqual}
- | GE { $$ = value.GreatEqual}
- | NE { $$ = value.NotEqual}
+ '=' {$$= Value.Equal}
+ | '<' {$$ = Value.Less}
+ | '>' {$$ = Value.Great}
+ | LE { $$ = Value.LessEqual}
+ | GE { $$ = Value.GreatEqual}
+ | NE { $$ = Value.NotEqual}
 
 
 limit_opt:

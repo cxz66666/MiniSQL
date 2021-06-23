@@ -4,10 +4,10 @@ import (
 	"sync"
 )
 
-const InitSize = 1024
-
+const InitSize = 2048
+const DeleteSize = 512
 type LRUList struct {
-	root Block  // dummy header4w
+	root Block  // dummy header
 	len  int
 }
 
@@ -43,8 +43,8 @@ func (l *LRUList) insert(e, at *Block) *Block {
 func (l *LRUList) remove(e *Block) *Block {
 	e.prev.next = e.next
 	e.next.prev = e.prev
-	e.next = nil
-	e.prev = nil
+	//e.next = nil
+	//e.prev = nil
 	l.len--
 	return e
 }
@@ -87,20 +87,20 @@ func (cache *LRUCache) PutBlock(value *Block, index int) *Block {
 	//maybe it's wrong, I'm not sure
 	if len(cache.blockMap) >= cache.Size {
 		var temp = cache.root.Front()
-		if temp != nil {
-			for ; temp.pin; temp = temp.next {
+
+		for deleteNum:=0;deleteNum<DeleteSize;deleteNum++ {
+			if temp.pin{
+				temp=temp.next
+			} else {
+				temp.Lock()
+				temp.flush()
+				cache.root.remove(temp)
+				oldIndex := Query2Int(nameAndPos{fileName: temp.filename, blockId: temp.blockid})
+				delete(cache.blockMap, oldIndex)
+				temp.Unlock()
+				temp=temp.next
 			}
-
-			temp.Lock()
-
-
-			defer temp.Unlock()
-			temp.flush()
-			cache.root.remove(temp)
-			oldIndex := Query2Int(nameAndPos{fileName: temp.filename, blockId: temp.blockid})
-			delete(cache.blockMap, oldIndex)
 		}
-
 	}
 	cache.root.appendToBack(value)
 

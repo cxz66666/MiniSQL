@@ -179,11 +179,11 @@ func DropIndexAPI(statement types.DropIndexStatement) error  {
 
 
 func InsertAPI(statement types.InsertStament) error  {
-	err,colPos,startBytePos:= CatalogManager.InsertCheck(statement)
+	err,colPos,startBytePos,uniquescolumns:= CatalogManager.InsertCheck(statement)
 	if err!=nil{
 		return err
 	}
-	err=RecordManager.InsertRecord(CatalogManager.GetTableCatalogUnsafe(statement.TableName),colPos,startBytePos,statement.Values)
+	err=RecordManager.InsertRecord(CatalogManager.GetTableCatalogUnsafe(statement.TableName),colPos,startBytePos,statement.Values,uniquescolumns)
 	if err!=nil{
 		return err
 	}

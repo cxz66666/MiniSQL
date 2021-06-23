@@ -6,23 +6,23 @@ import (
 	"minisql/src/Interpreter/types"
 	"minisql/src/Interpreter/value"
 )
-//Already do NULL CHECK, if a value is null, I will check it and throw a error !
-func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
+//Already do NULL CHECK, if a Value is null, I will check it and throw a error !
+func InsertCheck(statement types.InsertStament) (error,[]int,[]int,[]UniquesColumn) {
 	var table *TableCatalog
 
 	var  ok bool
 	if len(UsingDatabase.DatabaseId)==0 {
-		return errors.New("no using database， please use 'use database' before Insert"),nil,nil
+		return errors.New("no using database， please use 'use database' before Insert"),nil,nil,nil
 	}
 	if table,ok=TableName2CatalogMap[statement.TableName];!ok { //
-		return errors.New("don't have a table named "+statement.TableName+" ,please use create to build it"),nil,nil
+		return errors.New("don't have a table named "+statement.TableName+" ,please use create to build it"),nil,nil,nil
 	}
 	var columnPositions []int
 	var startBytePos []int
-
+	var uniquescolumns []UniquesColumn
 	if len(statement.ColumnNames)==0 { //insert all
 		if len(statement.Values)!=len(table.ColumnsMap) {
-			return errors.New("input numbers don't fit the column type"),nil,nil
+			return errors.New("input numbers don't fit the column type"),nil,nil,nil
 		}
 		columnPositions=make([]int,len(statement.Values))
 		startBytePos=make([]int,len(statement.Values))
@@ -33,10 +33,25 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 				 if  item,ok:=statement.Values[pos].(value.Int);ok&&column.Type.TypeTag==Float64{ //是Int 同时列属性为float
 					statement.Values[pos]=value.Float{Val: float64(item.Val)} //将其转为Float值
 				 } else {
-					 return errors.New(fmt.Sprintf("column %s need a type %s, but your input value is %s",column.Name,ColumnType2StringName(column.Type.TypeTag),statement.Values[pos].String())),nil,nil
+					 return errors.New(fmt.Sprintf("column %s need a type %s, but your input Value is %s",column.Name,ColumnType2StringName(column.Type.TypeTag),statement.Values[pos].String())),nil,nil,nil
 				 }
 			}
 			startBytePos[column.ColumnPos]= column.StartBytesPos
+
+			//开始搜索unique列表
+			if column.Unique {  //加入unique列表
+				found:=false
+				for _,index :=range table.Indexs {
+					if index.Keys[0].Name==column.Name {
+						uniquescolumns=append(uniquescolumns,UniquesColumn{ColumnName: column.Name, Value: statement.Values[pos], HasIndex: true})
+						found=true //有索引
+						break
+					}
+				}
+				if !found {
+					uniquescolumns=append(uniquescolumns,UniquesColumn{ColumnName: column.Name, Value: statement.Values[pos], HasIndex: false})
+				}
+			}
 		}
 		for i:=0;i<len(statement.Values);i++ {
 			//append 0,1,2,3...
@@ -49,17 +64,30 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 		for index,colName:=range statement.ColumnNames {
 			var col Column
 			if col,ok=table.ColumnsMap[colName];!ok {
-				return errors.New("don't have a column named "+colName+" ,please check your table"),nil,nil
+				return errors.New("don't have a column named "+colName+" ,please check your table"),nil,nil,nil
 			}
 			if col.Type.TypeTag!=statement.Values[index].Convert2IntType() {
 				if  item,ok:=statement.Values[index].(value.Int);ok&&col.Type.TypeTag==Float64{ //是Int 同时列属性为float
 					statement.Values[index]=value.Float{Val: float64(item.Val)} //将其转为Float值
 				} else {
-					return errors.New(fmt.Sprintf("column %s need a type %s, but your input value is %s",col.Name,ColumnType2StringName(col.Type.TypeTag),statement.Values[index].String())),nil,nil
+					return errors.New(fmt.Sprintf("column %s need a type %s, but your input Value is %s",col.Name,ColumnType2StringName(col.Type.TypeTag),statement.Values[index].String())),nil,nil,nil
 				}
 			}
 			columnPositions=append(columnPositions,col.ColumnPos)
 			startBytePos=append(startBytePos,col.StartBytesPos)
+			if col.Unique {
+				found:=false
+				for _, id :=range table.Indexs {
+					if id.Keys[0].Name==col.Name {
+						uniquescolumns=append(uniquescolumns,UniquesColumn{ColumnName: col.Name, Value: statement.Values[index], HasIndex: true})
+						found=true //有索引
+						break
+					}
+				}
+				if !found {
+					uniquescolumns=append(uniquescolumns,UniquesColumn{ColumnName: col.Name, Value: statement.Values[index], HasIndex: false})
+				}
+			}
 		}
 		for index,col:=range table.ColumnsMap{
 			if !col.NotNull {
@@ -73,11 +101,11 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int) {
 				}
 			}
 			if flag==0 {
-				return errors.New(fmt.Sprintf("column %s is a not null type, please input a value for it",index)),nil,nil
+				return errors.New(fmt.Sprintf("column %s is a not null type, please input a Value for it",index)),nil,nil,nil
 			}
 		}
 	}
-	return nil,columnPositions,startBytePos
+	return nil,columnPositions,startBytePos,uniquescolumns
 }
 
 func DeleteCheck(statement types.DeleteStatement) (error,*types.ComparisonExprLSRV)  {
@@ -124,7 +152,7 @@ func UpdateCheck(statement types.UpdateStament)  (error,[]string,[]value.Value, 
 				statement.SetExpr[i].Right=value.Float{Val: float64(intitem.Val) }
 				item.Right=value.Float{Val: float64(intitem.Val) }
 			} else {
-				return errors.New(fmt.Sprintf("column %s need a type %d, but your input value is %s",column.Name,column.Type.TypeTag,item.Right.String())),nil,nil,nil
+				return errors.New(fmt.Sprintf("column %s need a type %d, but your input Value is %s",column.Name,column.Type.TypeTag,item.Right.String())),nil,nil,nil
 			}
 		}
 		setColumns=append(setColumns,item.Left)

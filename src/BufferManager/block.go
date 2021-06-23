@@ -6,7 +6,6 @@ import (
 	"sync"
 )
 
-var TotalDirtyBlock int =0
 // Block 为缓冲区的块，只对外保留Data切片
 type Block struct {
 	filename string
@@ -21,9 +20,7 @@ type Block struct {
 
 //脏了
 func (b *Block)SetDirty() {
-	if !b.dirty {
-		TotalDirtyBlock++
-	}
+
 	b.dirty =true
 }
 //pin住留在缓冲区内
@@ -65,7 +62,6 @@ func (b *Block)flush() error {
 		return err
 	}
 	_,err=file.Write(b.Data)
-	TotalDirtyBlock--
 	b.dirty =false
 
 	return err

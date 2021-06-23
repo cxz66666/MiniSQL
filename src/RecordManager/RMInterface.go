@@ -154,58 +154,41 @@ func DropIndex(table *CatalogManager.TableCatalog, indexName string) error {
 }
 
 //InsertRecord 传入cm中table的引用， columnPos传入插入哪些列，其值为column在table中的第几个   startBytePos 传入开始byte的集合，分别代表每个value代表的数据从哪个byte开始存（已经加上valid位和null位），values为value数组
-func InsertRecord(table *CatalogManager.TableCatalog, columnPos []int, startBytePos []int, values []value.Value) error {
+func InsertRecord(table *CatalogManager.TableCatalog, columnPos []int, startBytePos []int, values []value.Value,uniquescolumns []CatalogManager.UniquesColumn) error {
 	tableNameWithPrefix:= CatalogManager.TableFilePrefix() + "_data/" + table.TableName
 	//首先检查 unique限制
 	err := loadFreeList(table.TableName)
 	if err != nil {
 		return err
 	}
-	for _, column := range table.ColumnsMap {
-		if !column.Unique {  //非unique不处理
-			continue
-		}
-		for i, pos := range columnPos { //找到插入数据中的这一列
-			//随后做index优化
-			if column.ColumnPos == pos {
-			//开始判断是否这个unique上有索引
-				var foundIndex=false
-				for _,index:=range table.Indexs {
-					if index.Keys[0].Name==column.Name {
-						indexinfo := IndexManager.IndexInfo{
-							Table_name: tableNameWithPrefix,
-							Attr_name:   column.Name,
-							Attr_type:   column.Type.TypeTag,
-							Attr_length: uint16(column.Type.Length)}
 
-						retNode, err := IndexManager.GetFirst(indexinfo,values[i], value.Equal)
-						if err != nil {
-							return err
-						}
-						if retNode!=nil {;
-							return errors.New(column.Name + " uniuqe conflict")
-						}
-						foundIndex=true //已经用过索引进行处理了
-						break
-					}
-				}
-				//没有索引
-				if !foundIndex{
-					where:= types.Where{Expr: &types.ComparisonExprLSRV{Left: column.Name,Operator: value.Equal,Right:values[i] } }//构造where表达式
-					err,rows:=SelectRecord(table,make([]string,0),&where) //进行全表搜索
-					if err!=nil {
-						return err
-					}
-					if len(rows)!=0 {
-						return errors.New(column.Name + " uniuqe conflict")
-					}
-				}
-				//处理到这一步就表示这个column符合unique的条件
-				break
+	indexinfo := IndexManager.IndexInfo{
+		Table_name: tableNameWithPrefix,
+	}
+	for _,item:=range uniquescolumns {
+		if item.HasIndex {
+			indexinfo.Attr_name=item.ColumnName
+			indexinfo.Attr_type=table.ColumnsMap[item.ColumnName].Type.TypeTag
+			indexinfo.Attr_length= uint16(table.ColumnsMap[item.ColumnName].Type.Length)
+			retNode, err := IndexManager.GetFirst(indexinfo,item.Value, value.Equal)
+			if err != nil {
+				return err
+			}
+			if retNode!=nil {;
+				return errors.New(item.ColumnName + " uniuqe conflict")
+			}
+		} else {
+			where:= types.Where{Expr: &types.ComparisonExprLSRV{Left: item.ColumnName,Operator: value.Equal,Right:item.Value } }//构造where表达式
+			err,rows:=SelectRecord(table,make([]string,0),&where) //进行全表搜索
+			if err!=nil {
+				return err
+			}
+			if len(rows)!=0 {
+				return errors.New(item.ColumnName + " uniuqe conflict")
 			}
 		}
 	}
-
+	//unique check legal
 	if len(FreeList.Positions) == 0 {
 		blockId, err := BufferManager.NewBlock(CatalogManager.TableFilePrefix() + "_data/"+table.TableName)
 		if err != nil {
@@ -227,22 +210,14 @@ func InsertRecord(table *CatalogManager.TableCatalog, columnPos []int, startByte
 	}
 
 	//加index
-	for _, index := range table.Indexs {
-		indexinfo := IndexManager.IndexInfo{
-			Table_name:  tableNameWithPrefix,
-			Attr_name:   index.Keys[0].Name,
-			Attr_type:   table.ColumnsMap[index.Keys[0].Name].Type.TypeTag,
-			Attr_length: uint16(table.ColumnsMap[index.Keys[0].Name].Type.Length)}
-		var val value.Value
-
-		for i, col := range columnPos {
-			if table.ColumnsMap[index.Keys[0].Name].ColumnPos == col {
-				val = values[i]
-				break
+	for _,item:=range uniquescolumns {
+		if item.HasIndex {
+			indexinfo.Attr_name=item.ColumnName
+			indexinfo.Attr_type=table.ColumnsMap[item.ColumnName].Type.TypeTag
+			indexinfo.Attr_length= uint16(table.ColumnsMap[item.ColumnName].Type.Length)
+			if err := IndexManager.Insert(indexinfo, item.Value, pos); err != nil {
+				return err
 			}
-		}
-		if err := IndexManager.Insert(indexinfo, val, pos); err != nil {
-			return err
 		}
 	}
 

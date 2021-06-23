@@ -6,8 +6,8 @@ import (
 	"sync"
 )
 
-const GOFlushNum = 10  //最多多少协程同时flush
-const BlockSize = 4096 // for debug
+const GOFlushNum = 5  //最多多少协程同时flush
+const BlockSize = 8192 // for debug
 var blockBuffer *LRUCache
 var connector = "*"
 
@@ -106,9 +106,6 @@ func BlockFlushAll() (bool, error) {
 //BeginBlockFlush 每次结束一条指令后 channel接收指令并且开始刷新
 func BeginBlockFlush(channel chan struct{}) {
 	for _ = range channel {
-		if 2*TotalDirtyBlock < len(blockBuffer.blockMap) {
-			continue
-		}
 		_, err := BlockFlushAll()
 		if err != nil {
 			fmt.Println(err)

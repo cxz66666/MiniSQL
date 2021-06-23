@@ -3,6 +3,7 @@ package CatalogManager
 import (
 	"encoding/json"
 	"minisql/src/Interpreter/types"
+	"minisql/src/Interpreter/value"
 )
 
 //go:generate msgp
@@ -40,7 +41,7 @@ type Column struct {
 	Type    ColumnType
 	Unique bool
 	NotNull bool
-	ColumnPos int   //the created position when table is created, this value is fixed
+	ColumnPos int   //the created position when table is created, this Value is fixed
 	StartBytesPos int //the start postion in record bytes array
 }
 
@@ -96,7 +97,11 @@ type DatabaseCatalog struct {
 type MiniSqlCatalog struct {
 	Databases    []DatabaseCatalog
 }
-
+type UniquesColumn struct {
+	ColumnName string
+	Value      value.Value
+	HasIndex   bool
+}
 
 func CreateTableStatement2TableCatalog(a *types.CreateTableStatement) *TableCatalog  {
 	aj,_:=json.Marshal(&a)
