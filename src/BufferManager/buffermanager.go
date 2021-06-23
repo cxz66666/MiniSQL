@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-const GOFlushNum=10  //最多多少协程同时flush
+const GOFlushNum = 10  //最多多少协程同时flush
 const BlockSize = 4096 // for debug
 var blockBuffer *LRUCache
 var connector = "*"
@@ -14,9 +14,8 @@ var connector = "*"
 var posNum = 0
 var fileNamePos2Int map[nameAndPos]int
 
-
-var blockNumLock sync.Mutex   //没法用读写锁，必须用互斥锁
-var query2IntLock sync.Mutex    //struct 2 int 映射表
+var blockNumLock sync.Mutex  //没法用读写锁，必须用互斥锁
+var query2IntLock sync.Mutex //struct 2 int 映射表
 
 type nameAndPos struct {
 	fileName string
@@ -47,7 +46,7 @@ func BlockRead(filename string, block_id uint16) (*Block, error) {
 	if err != nil {
 		return nil, err
 	}
-	blockPtr:=blockBuffer.PutBlock(&newBlock, t)
+	blockPtr := blockBuffer.PutBlock(&newBlock, t)
 	blockPtr.Lock()
 	return blockPtr, nil
 }
@@ -79,15 +78,16 @@ func NewBlock(filename string) (uint16, error) {
 	blockBuffer.PutBlock(&newBlock, t)
 	return block_id, nil
 }
+
 //BlockFlushAll 刷新所有块，一般不使用，拿锁， 同时协程处理
 func BlockFlushAll() (bool, error) {
 	blockBuffer.Lock()
 	defer blockBuffer.Unlock()
 	flushChannel := make(chan int)
-	for i:=0;i<GOFlushNum;i++ {   //开启GOFlushNum个处理协程
+	for i := 0; i < GOFlushNum; i++ { //开启GOFlushNum个处理协程
 		go func(channel chan int) {
-			for id:=range channel {
-				item:=blockBuffer.blockMap[id];
+			for id := range channel {
+				item := blockBuffer.blockMap[id]
 				item.Lock()
 				item.flush()
 				item.reset()
@@ -97,37 +97,40 @@ func BlockFlushAll() (bool, error) {
 	}
 	for index, item := range blockBuffer.blockMap {
 		if item.dirty {
-				flushChannel<-index  //传入key
+			flushChannel <- index //传入key
 		}
 	}
 	return true, nil
 }
+
 //BeginBlockFlush 每次结束一条指令后 channel接收指令并且开始刷新
-func BeginBlockFlush(channel chan struct{})  {
-	for _=range channel {
-		if 2*TotalDirtyBlock<len(blockBuffer.blockMap) {
+func BeginBlockFlush(channel chan struct{}) {
+	for _ = range channel {
+		if 2*TotalDirtyBlock < len(blockBuffer.blockMap) {
 			continue
 		}
-		_,err:= BlockFlushAll()
-		if err!=nil	 {
+		_, err := BlockFlushAll()
+		if err != nil {
 			fmt.Println(err)
 		}
 	}
 }
+
 //DeleteOldBlock 当删除某表时候，删除该表出现的block 首先要拿锁*
 func DeleteOldBlock(fileName string) error {
 	blockBuffer.Lock()
 	defer blockBuffer.Unlock()
 	for index, item := range blockBuffer.blockMap {
-		if item.filename==fileName {
+		if item.filename == fileName {
 			item.Lock()
-			delete(blockBuffer.blockMap,index)
+			delete(blockBuffer.blockMap, index)
 			blockBuffer.root.remove(item)
 			item.Unlock()
 		}
 	}
 	return nil
 }
+
 //Query2Int 将filename和pos转为 buffer内部的int，如果不存在就创建
 func Query2Int(pos nameAndPos) int {
 	query2IntLock.Lock()
@@ -140,7 +143,7 @@ func Query2Int(pos nameAndPos) int {
 	return posNum
 }
 
-func findBlockNumber(fileName string) (uint16, error)  {
+func findBlockNumber(fileName string) (uint16, error) {
 	fileInfo, err := os.Stat(fileName)
 	if err != nil {
 		return 0, err

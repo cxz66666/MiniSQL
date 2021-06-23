@@ -1,13 +1,10 @@
 package value
 
-
-
 import (
 	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"minisql/src/Utils"
 )
 //go:generate msgp
 
@@ -39,6 +36,7 @@ type Row struct {  // It's a row for record
 type Value interface {
 	String()string
 	Compare(Value, CompareType)(bool,error)
+	CompareWithoutType(Value) (int,error)
 	SafeCompare(Value,CompareType)(bool,error)
 	Convert2Bytes() ([]byte,error)
 	Convert2IntType() ValueType
@@ -139,7 +137,14 @@ func (i Int)Convert2Bytes() ([]byte,error) {
 func (i Int)Convert2IntType() int {
 	return IntType
 }
-
+func (i Int)CompareWithoutType(v Value) (int,error)  {
+	if(i.Val<v.(Int).Val){
+		return -1,nil
+	}else if(i.Val==v.(Int).Val){
+		return 0,nil
+	}
+	return 1,nil
+}
 
 
 func (i Float) String() string {
@@ -201,6 +206,16 @@ func (i Float)Convert2Bytes() ([]byte,error) {
 func (i Float)Convert2IntType() int {
 	return FloatType
 }
+func (i Float)CompareWithoutType(v Value) (int,error)  {
+	if(i.Val<v.(Float).Val){
+		return -1,nil
+	}else if(i.Val==v.(Float).Val){
+		return 0,nil
+	}
+	return 1,nil
+}
+
+
 
 func (i Bytes) String() string {
 	var ans []byte
@@ -215,23 +230,21 @@ func (i Bytes) String() string {
 
 func (i Bytes)Compare(v Value,op CompareType)(bool,error) {
 
-	i_str:=Utils.CString(i.Val)
-	v_str:=Utils.CString((v).(Bytes).Val)
+	cp:=bytes.Compare(i.Val,v.(Bytes).Val)
 	switch op {
 	case Great:
-		return i_str>v_str,nil
+		return cp==1,nil
 	case GreatEqual:
-		return i_str>=v_str,nil
+		return cp==0||cp==1,nil
 	case Less:
-
-		return i_str<v_str,nil
+		return cp==-1,nil
 	case LessEqual:
 
-		return i_str<=v_str,nil
+		return cp==0||cp==1,nil
 	case Equal:
-		return i_str==v_str,nil
+		return cp==0,nil
 	case NotEqual:
-		return i_str!=v_str,nil
+		return cp!=0,nil
 	}
 	return false,fmt.Errorf("unknow operation type %d", op)
 }
@@ -247,6 +260,12 @@ func (i Bytes)Convert2Bytes() ([]byte,error) {
 func (i Bytes)Convert2IntType() int {
 	return BytesType
 }
+func (i Bytes)CompareWithoutType(v Value) (int,error)  {
+	return bytes.Compare(i.Val,v.(Bytes).Val),nil
+}
+
+
+
 
 func (i Bool) String() string {
 	return fmt.Sprint(i.Val)
@@ -283,6 +302,15 @@ func (i Bool)Convert2Bytes() ([]byte,error) {
 func (i Bool)Convert2IntType() int {
 	return BoolType
 }
+func (i Bool)CompareWithoutType(v Value) (int,error)  {
+	if i.Val==v.(Bool).Val {
+		return 1,nil
+	}
+	return  0,nil
+}
+
+
+
 
 func (i Alien) String() string  {
 	return fmt.Sprint(i.Val)
@@ -318,6 +346,13 @@ func (i Alien)Convert2Bytes() ([]byte,error) {
 func (i Alien)Convert2IntType() int {
 	return  AlienType
 }
+func (i Alien)CompareWithoutType(v Value) (int,error)  {
+
+	return  -1,nil
+}
+
+
+
 
 func (i Null) String() string  {
 	return "null"
@@ -340,6 +375,11 @@ func (i Null)Convert2Bytes() ([]byte,error) {
 func (i Null)Convert2IntType() int {
 	return NullType
 }
+func (i Null)CompareWithoutType(v Value) (int,error)  {
+	return  -1,nil
+}
+
+
 
 // NewFromParquetValue you can input a arbitrary type into it, and it will try it's best to convert it to Value
 func NewFromParquetValue(v interface{}) Value {
@@ -417,9 +457,7 @@ func Byte2Value(mybytes []byte,vt ValueType,length ...int) (Value,error)  {
 		if len(mybytes)<length[0] {
 			return nil,errors.New("bytes don't have enough length to convert to bytes")
 		}
-		ret:=make([]byte,0,length[0]+1)
-		ret=append(ret,mybytes[0:length[0]]...)
-		return Bytes{Val: ret},nil
+		return Bytes{Val: mybytes[0:length[0]]},nil
 	case NullType:
 		if len(length)<1 ||length[0]<=0{
 			return nil,errors.New("please input a length for bytes")

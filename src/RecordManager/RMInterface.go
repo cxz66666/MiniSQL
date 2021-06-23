@@ -170,7 +170,7 @@ func InsertRecord(table *CatalogManager.TableCatalog, columnPos []int, startByte
 			if column.ColumnPos == pos {
 			//开始判断是否这个unique上有索引
 				var foundIndex=false
-				for _,index:=range  table.Indexs {
+				for _,index:=range table.Indexs {
 					if index.Keys[0].Name==column.Name {
 						indexinfo := IndexManager.IndexInfo{
 							Table_name: tableNameWithPrefix,

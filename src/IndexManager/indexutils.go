@@ -33,6 +33,7 @@ func (node bpNode) nodeInit() {
 }
 
 func getBpNode(filename string, block_id uint16, key_length uint16) (node bpNode, block *BufferManager.Block) {
+	//fmt.Println("bpnode read",block_id)
 	block, _ = BufferManager.BlockRead(filename, block_id)
 	node = bpNode{
 		key_length: key_length,

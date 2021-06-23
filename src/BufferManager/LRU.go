@@ -1,11 +1,13 @@
 package BufferManager
 
-import "sync"
+import (
+	"sync"
+)
 
 const InitSize = 1024
 
 type LRUList struct {
-	root Block  // dummy header
+	root Block  // dummy header4w
 	len  int
 }
 
@@ -88,7 +90,10 @@ func (cache *LRUCache) PutBlock(value *Block, index int) *Block {
 		if temp != nil {
 			for ; temp.pin; temp = temp.next {
 			}
+
 			temp.Lock()
+
+
 			defer temp.Unlock()
 			temp.flush()
 			cache.root.remove(temp)

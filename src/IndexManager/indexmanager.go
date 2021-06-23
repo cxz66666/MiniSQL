@@ -1,6 +1,7 @@
 package IndexManager
 
 import (
+	"fmt"
 	"minisql/src/BufferManager"
 	"minisql/src/Interpreter/value"
 	"minisql/src/Utils"
@@ -86,6 +87,7 @@ func Insert(info IndexInfo, key_value value.Value, pos Position) error {
 			cur_node_block = next_node_block
 		}
 	}
+
 	return nil
 }
 
@@ -144,6 +146,8 @@ func (node *ResultNode) GetNext() *ResultNode {
 }
 
 func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareType) (*ResultNode, error) {
+	//fmt.Println("begin get first")
+	//defer fmt.Println("end get first")
 	filename := info.getFileName()
 	key_length := info.Attr_length
 
@@ -151,10 +155,11 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 	if compare_type == value.Equal || compare_type == value.GreatEqual || compare_type == value.Great {
 		var i uint16
 		// Find the first leaf that contains the key
+
 		for cur_node.isLeaf() == 0 {
 			n := cur_node.getSize()
 			for i = 0; i < n; i++ {
-				if res, _ := cur_node.getKey(i, info.Attr_type).Compare(key_value, value.Great); res {
+				if res, _ := cur_node.getKey(i, info.Attr_type).Compare(key_value,value.Great); res {
 					break
 				}
 			}
@@ -175,46 +180,84 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		}
 	}
 
-	dummy_head := new(ResultNode)
-	cur_result_node := dummy_head
+
 
 	var i uint16 = 0
 	begin := false
-
-	// Find the first node that satisfy the condition
-	for {
-		n := cur_node.getSize()
-		if n == 0 {
-			break
-		}
-		for j := uint16(0); j < n; j++ {
-			if res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value, compare_type); res {
-				begin = true
-				i = j
-				break
+	dummy_head := new(ResultNode)
+	cur_result_node := dummy_head
+	//fmt.Println("find the first node")
+	if n:=cur_node.getSize();n!=0 {
+		switch compare_type {
+		case value.Equal:
+				for j := uint16(0); j < n; j++ {
+					res, _ := cur_node.getKey(j, info.Attr_type).CompareWithoutType(key_value);
+					if  res==0 {
+						begin = true
+						new_result_node := new(ResultNode)
+						*new_result_node = ResultNode{
+							Pos:       cur_node.getFilePointer(j),
+							next_node: nil,
+						}
+						cur_node_block.FinishRead() //IMPORTANT!!
+						return new_result_node,nil  //找到了直接返回,不要忘记放锁
+					}
+					if res>0 { //大于直接跳出 并且返回
+						break
+					}
+				}
+		case value.GreatEqual,value.Great:
+			for j := uint16(0); j < n; j++ {
+				if res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value, compare_type); res {
+					begin = true
+					i = j
+					break
+				}
 			}
-		}
-		if begin {
-			break
-		}
-		// Switch to the next node
-		next_node_id := cur_node.getNext()
-		cur_node_block.FinishRead()
-		if next_node_id == 0 {
-			return nil, nil
-		}
-		next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
-		cur_node = next_node
-		cur_node_block = next_node_block
-		if cur_node.isLeaf() == 0 {
-			// Search to the end
-			break
+		case value.LessEqual,value.Less:
+			if res, _ := cur_node.getKey(0, info.Attr_type).Compare(key_value, compare_type); res {
+				begin = true
+				i = 0
+
+			} //如果不满足就直接返回了
 		}
 	}
+
+	// Find the first node that satisfy the condition
+	//for {
+	//	n := cur_node.getSize()
+	//	if n == 0 {
+	//		break
+	//	}
+	//	for j := uint16(0); j < n; j++ {
+	//		if res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value, compare_type); res {
+	//			begin = true
+	//			i = j
+	//			break
+	//		}
+	//	}
+	//	if begin {
+	//		break
+	//	}
+	//	// Switch to the next node
+	//	next_node_id := cur_node.getNext()
+	//	cur_node_block.FinishRead()
+	//	if next_node_id == 0 {
+	//		return nil, nil
+	//	}
+	//	next_node, next_node_block := getBpNode(filename, next_node_id, key_length)
+	//	cur_node = next_node
+	//	cur_node_block = next_node_block
+	//	if cur_node.isLeaf() == 0 {
+	//		// Search to the end
+	//		break
+	//	}
+	//}
 	if !begin {
 		cur_node_block.FinishRead() //IMPORTANT!!
 		return nil, nil
 	}
+	fmt.Println("begin find result")
 
 	for {
 		end := false
