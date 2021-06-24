@@ -201,10 +201,32 @@ func whereOptCheck(where *types.Where,table *TableCatalog) (error, *types.Compar
 		}
 
 	 }
+	var bestExpr *types.ComparisonExprLSRV =nil  //之后可以加入索引查询优化
 	for _,indexItem:=range indexList {
 		if b,exprIndex:= where.Expr.GetIndexExpr(indexItem.Keys[0].Name);b {
-			return nil,exprIndex
+			if bestExpr==nil&&exprIndex!=nil {  //刚开始时候
+				bestExpr=exprIndex
+			} else if bestExpr!=nil&&exprIndex!=nil &&bestExpr.Operator!=value.Equal&&exprIndex.Operator==value.Equal {//有等值索引优先使用
+				bestExpr=exprIndex
+			} else if bestExpr!=nil&&exprIndex!=nil { //都是不等索引或者都是等值索引
+				bestType:=table.ColumnsMap[bestExpr.Left].Type.TypeTag
+				nowType:=table.ColumnsMap[indexItem.Keys[0].Name].Type.TypeTag
+				switch bestType {
+				case Int64:
+					bestExpr=bestExpr
+				case Float64:
+					if nowType==Float64||nowType==Bytes {
+						bestExpr=bestExpr
+					} else {
+						bestExpr=exprIndex
+					}
+				case Bytes:
+					if nowType==Float64||nowType==Int64 {
+						bestExpr=exprIndex
+					}
+				}
+			}
 		}
 	}
-	 return nil,nil
+	 return nil,bestExpr
 }

@@ -152,7 +152,7 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 	key_length := info.Attr_length
 
 	cur_node, cur_node_block := getBpNode(filename, 0, key_length)
-	if compare_type == value.Equal || compare_type == value.GreatEqual || compare_type == value.Great {
+	if compare_type == value.Equal || compare_type == value.GreatEqual || compare_type == value.Great  {
 		var i uint16
 		// Find the first leaf that contains the key
 
@@ -206,6 +206,7 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 						break
 					}
 				}
+
 		case value.GreatEqual,value.Great:
 			for j := uint16(0); j < n; j++ {
 				if res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value, compare_type); res {

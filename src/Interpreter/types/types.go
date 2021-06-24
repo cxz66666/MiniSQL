@@ -421,6 +421,10 @@ func (e *AndExpr)Debug() {
 func (e *AndExpr)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
 	b,c:=e.Left.GetIndexExpr(indexName)
 	if b==true {
+		b1,c1:=e.Right.GetIndexExpr(indexName)
+		if b1==true&&c1!=nil&&c1.Operator==value.Equal {
+			return true,c1
+		}
 		return b,c
 	}
 	return e.Right.GetIndexExpr(indexName)
