@@ -4,8 +4,8 @@ import (
 	"sync"
 )
 
-const InitSize = 2048
-const DeleteSize = 512
+const InitSize = 2048 //块多少
+const DeleteSize = 512 //满了后就删除多少个
 type LRUList struct {
 	root Block  // dummy header
 	len  int
@@ -75,7 +75,7 @@ func NewLRUCache() *LRUCache {
 	cache.blockMap = make(map[int]*Block, InitSize*2)
 	return cache
 }
-
+//PutBlock 将block插入buffer中，并返回block的指针
 func (cache *LRUCache) PutBlock(value *Block, index int) *Block {
 	cache.Lock() //写锁
 	defer cache.Unlock()

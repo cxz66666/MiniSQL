@@ -11,6 +11,7 @@ var(
 	UsingDatabase DatabaseCatalog
 	TableName2CatalogMap TableCatalogMap=make(map[string]*TableCatalog)  //table name to catalog
 )
+//ExistDatabase 用来判断该数据库是否存在
 func ExistDatabase(databaseId string) bool   {
 	for _,item:=range minisqlCatalog.Databases {
 		if item.DatabaseId==databaseId {
@@ -19,6 +20,7 @@ func ExistDatabase(databaseId string) bool   {
 	}
 	return false
 }
+//GetDatabaseCatalog 用来获取该数据库的catalog
 func GetDatabaseCatalog(databaseId string) (DatabaseCatalog,bool) {
 	for _,item:=range minisqlCatalog.Databases {
 		if item.DatabaseId==databaseId {
@@ -27,6 +29,7 @@ func GetDatabaseCatalog(databaseId string) (DatabaseCatalog,bool) {
 	}
 	return DatabaseCatalog{},false
 }
+//CreateDatabase 创建新的数据库
 func CreateDatabase(databaseId string) error {
 	if ExistDatabase(databaseId) {
 		return errors.New("database '"+databaseId+"' had been created")
@@ -53,7 +56,7 @@ func CreateDatabase(databaseId string) error {
 	return FlushDbMeta()
 
 }
-//获取某数据库下的所有table信息，返回值为 TableCatalogMap
+//GetDBTablesMap 获取某数据库下的所有table信息，返回值为 TableCatalogMap
 func GetDBTablesMap(databaseId string)  (TableCatalogMap,error) {
 	if !ExistDatabase(databaseId) {
 		return nil,errors.New("database '"+databaseId+"' is not exist")
@@ -75,6 +78,7 @@ func GetDBTablesMap(databaseId string)  (TableCatalogMap,error) {
 	}
 	return res,nil
 }
+//UseDatabase 使用某个数据库，加载其文件catalog
 func UseDatabase(databaseId string) error  {
 	if !ExistDatabase(databaseId) {
 		return errors.New("database '"+databaseId+"' is not exist")
@@ -113,12 +117,14 @@ func UseDatabase(databaseId string) error  {
 	}
 	return nil
 }
+//DropDatabaseCheck 删除某database前的检查
 func DropDatabaseCheck(databaseId string)error  {
 	if !ExistDatabase(databaseId) {
 		return errors.New("Drop table "+databaseId+" doesn't exist")
 	}
 	return nil
 }
+//DropDatabase 直接删除某数据库的文件
 func DropDatabase(databaseId string) error  {
 	if !ExistDatabase(databaseId) {
 		return errors.New("Drop table "+databaseId+" doesn't exist")

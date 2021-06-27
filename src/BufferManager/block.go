@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// Block 为缓冲区的块，只对外保留Data切片
+//Block 为缓冲区的块，只对外保留Data切片
 type Block struct {
 	filename string
 	blockid  uint16
@@ -18,35 +18,35 @@ type Block struct {
 	    sync.Mutex
 }
 
-//脏了
+//SetDirty 脏了
 func (b *Block)SetDirty() {
 
 	b.dirty =true
 }
-//pin住留在缓冲区内
+//PinBlock pin住留在缓冲区内
 func (b *Block)PinBlock()  {
 	b.pin=true
 }
-//解pin
+//UnPinBlock 解pin
 func (b *Block)UnPinBlock()  {
 	b.pin=false
 }
-//释放读锁，读完一块必须干此时，不然锁就无法释放
+//FinishRead 释放读锁，读完一块必须干此时，不然锁就无法释放
 func (b *Block)FinishRead()  {
 	b.Unlock()
 	return
 }
-
+//reset 重置为干净
 func (b *Block)reset()  {
 	b.dirty =false
 	b.pin=false
 }
-
+//mark 初始化用
 func (b *Block) mark(fileName string,bid uint16)  {
 	b.filename =fileName
 	b.blockid =bid
 }
-
+//flush 写回并刷新
 func (b *Block)flush() error {
 	if !b.dirty {
 		return nil
@@ -66,6 +66,7 @@ func (b *Block)flush() error {
 
 	return err
 }
+//read 读取文件
 func (b *Block)read() error {
 	if b.dirty {
 		return b.flush()

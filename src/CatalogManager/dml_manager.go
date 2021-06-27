@@ -6,7 +6,7 @@ import (
 	"minisql/src/Interpreter/types"
 	"minisql/src/Interpreter/value"
 )
-//Already do NULL CHECK, if a Value is null, I will check it and throw a error !
+//InsertCheck Already do NULL CHECK, if a Value is null, I will check it and throw a error !
 func InsertCheck(statement types.InsertStament) (error,[]int,[]int,[]UniquesColumn) {
 	var table *TableCatalog
 
@@ -107,7 +107,7 @@ func InsertCheck(statement types.InsertStament) (error,[]int,[]int,[]UniquesColu
 	}
 	return nil,columnPositions,startBytePos,uniquescolumns
 }
-
+//DeleteCheck check the statement, and return the index if exist
 func DeleteCheck(statement types.DeleteStatement) (error,*types.ComparisonExprLSRV)  {
 	var table *TableCatalog
 	var  ok bool
@@ -124,6 +124,7 @@ func DeleteCheck(statement types.DeleteStatement) (error,*types.ComparisonExprLS
 	}
 	return nil,exprLSRV
 }
+//UpdateCheck check the statement, and return the update columns name, values and index if exist
 func UpdateCheck(statement types.UpdateStament)  (error,[]string,[]value.Value, *types.ComparisonExprLSRV)  {
 	var table *TableCatalog
 	var  ok bool
@@ -160,7 +161,7 @@ func UpdateCheck(statement types.UpdateStament)  (error,[]string,[]value.Value, 
 	}
 	return nil,setColumns,values, exprLSRV
 }
-
+//SelectCheck check the statement, and return index if exist
 func SelectCheck(statement types.SelectStatement) (error,*types.ComparisonExprLSRV)  {
 	var table *TableCatalog
 	var  ok bool
@@ -187,7 +188,7 @@ func SelectCheck(statement types.SelectStatement) (error,*types.ComparisonExprLS
 	}
 	return nil,exprLSRV
 }
-
+//whereOptCheck 用来查找有没有方便走的索引
 func whereOptCheck(where *types.Where,table *TableCatalog) (error, *types.ComparisonExprLSRV ) {
 	if where==nil {
 		return nil,nil

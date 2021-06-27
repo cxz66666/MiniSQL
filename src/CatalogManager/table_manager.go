@@ -5,6 +5,7 @@ import (
 	"minisql/src/Interpreter/types"
 )
 const prefix_primarykey="primary_key"
+//createTableInitAndCheck createtable前的检查
 func createTableInitAndCheck(statement *TableCatalog) (error,[]IndexCatalog) {
 	recordlength:=0
 	columnNum:=0
@@ -113,7 +114,7 @@ func createTableInitAndCheck(statement *TableCatalog) (error,[]IndexCatalog) {
 	}
 	return nil,indexs
 }
-
+//CreateTableCheck 用来检查table，并返回所有的应该建的索引
 func CreateTableCheck(statement types.CreateTableStatement) (error,[]IndexCatalog)  {
 	if len(UsingDatabase.DatabaseId) ==0 {
 		return errors.New("Don't use database, please create table after using database"),nil
@@ -146,6 +147,7 @@ func DropTableCheck(statement types.DropTableStatement) error{
 	}
 	return nil
 }
+//DropTable 真正删除table文件与catalog
 func DropTable(statement types.DropTableStatement) error  {
 	err:=DropTableCheck(statement)
 	if err!=nil {
@@ -174,6 +176,7 @@ func DropTable(statement types.DropTableStatement) error  {
 //	return errors.New("not found database")
 //}
 
+//GetTableCatalogUnsafe 不安全的拿到table的catalog
 func GetTableCatalogUnsafe(tableName string) *TableCatalog  {
 	return TableName2CatalogMap[tableName]
 }

@@ -10,21 +10,21 @@ const (
 	True  = true
 	False = false
 )
-
+//OnDelete is used for on delete behave
 type OnDelete=int
-type KeyOrder=int
-type ScalarColumnTypeTag=int
-type OperationType=int
 const (
 	NoAction OnDelete = iota
 	Cascade
 )
-
+//KeyOrder order for key
+type KeyOrder=int
 const (
 	Asc KeyOrder = iota
 	Desc
 )
 
+//ScalarColumnTypeTag is the type
+type ScalarColumnTypeTag=int
 const (
 	Bool ScalarColumnTypeTag = iota
 	Int64
@@ -34,6 +34,8 @@ const (
 	Date
 	Timestamp
 )
+
+type OperationType=int
 const (
 	CreateDatabase OperationType= iota
 	UseDatabase
@@ -49,6 +51,10 @@ const (
 	ExecFile
 )
 
+
+
+
+
 type DStatements interface {
 	GetOperationType() OperationType
 }
@@ -63,7 +69,6 @@ type DStatements interface {
 //}
 
 // Column is a table column.
-
 type Column struct {
 	Name    string
 	Type    ColumnType
@@ -197,6 +202,7 @@ func (s ExecFileStatement)GetOperationType() OperationType  {
 	return ExecFile
 }
 type (
+	//Where is the type for where func which maybe nil!
 	Where struct {
 		Expr Expr
 	}
@@ -208,6 +214,7 @@ type (
 		//GetIndexExpr input a index column name, and find whether have a name same as index
 		GetIndexExpr(string) (bool,*ComparisonExprLSRV)
 	}
+	//ComparisonExprLSRV left string right value
 	ComparisonExprLSRV struct {
 		Left string
 		Operator value.CompareType
@@ -456,7 +463,7 @@ func (e *OrExpr)Debug() {
 	e.Right.Debug()
 
 }
-// 注意 如果是or表达式 直接返回false，因此没法走单索引
+//GetIndexExpr 注意 如果是or表达式 直接返回false，因此没法走单索引
 func (e *OrExpr)GetIndexExpr(indexName string) (bool,*ComparisonExprLSRV){
 	return false,nil
 }

@@ -8,6 +8,7 @@ import (
 )
 //go:generate msgp
 
+//CompareType 用来标志比较类型
 type CompareType int
 const (
 	Great CompareType=iota
@@ -17,6 +18,7 @@ const (
 	Equal
 	NotEqual
 )
+//ValueType 用来标志比较类型
 type ValueType=int
 const (
 	BoolType ValueType = iota
@@ -29,15 +31,19 @@ const (
 	NullType
 	AlienType
 )
-type Row struct {  // It's a row for record
+//Row is a row for record
+type Row struct {
 	Values []Value
 }
-//Value is the most important type!
+//Value is the most important type which record the  true value
 type Value interface {
 	String()string
+	//Compare is unsafe compare, if you don't know the type is same, don't use it!
 	Compare(Value, CompareType)(bool,error)
+	// CompareWithoutType will return 0 if equal, -1 if less , 1 if greater
 	CompareWithoutType(Value) (int,error)
 	SafeCompare(Value,CompareType)(bool,error)
+	//Convert2Bytes is convert value to bytes
 	Convert2Bytes() ([]byte,error)
 	Convert2IntType() ValueType
 }
@@ -191,8 +197,8 @@ func (i Float)SafeCompare(v Value,op CompareType)(bool,error) {
 	case Float:
 		return i.Compare(v,op)
 	case Int:
-		var tmp_v =Float{Val: float64(v.(Int).Val)}
-		return i.Compare(tmp_v,op)
+		var tmpV =Float{Val: float64(v.(Int).Val)}
+		return i.Compare(tmpV,op)
 	default:
 		return false,nil
 	}
@@ -207,9 +213,9 @@ func (i Float)Convert2IntType() int {
 	return FloatType
 }
 func (i Float)CompareWithoutType(v Value) (int,error)  {
-	if(i.Val<v.(Float).Val){
+	if i.Val<v.(Float).Val {
 		return -1,nil
-	}else if(i.Val==v.(Float).Val){
+	}else if i.Val==v.(Float).Val {
 		return 0,nil
 	}
 	return 1,nil
@@ -469,7 +475,7 @@ func Byte2Value(mybytes []byte,vt ValueType,length ...int) (Value,error)  {
 	}
 	return nil,errors.New("The type is not supported.")
 }
-//
+//CompareWithType is function for compare
 func CompareWithType(i Value,v Value,op CompareType,vt ValueType) (bool,error) {
 	switch vt {
 	case BoolType:

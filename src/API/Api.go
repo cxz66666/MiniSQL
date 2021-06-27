@@ -229,7 +229,7 @@ func DropIndexAPI(statement types.DropIndexStatement) Error.Error  {
 	return Error.CreateSuccessError()
 }
 
-
+//InsertAPI nothing to explain
 func InsertAPI(statement types.InsertStament) Error.Error  {
 	err,colPos,startBytePos,uniquescolumns:= CatalogManager.InsertCheck(statement)
 	if err!=nil{
@@ -242,6 +242,7 @@ func InsertAPI(statement types.InsertStament) Error.Error  {
 	return Error.CreateRowsError(1)
 }
 
+//UpdateAPI nothing to explain
 func UpdateAPI(statement types.UpdateStament) Error.Error  {
 	err,setColumns,values, exprLSRV:=CatalogManager.UpdateCheck(statement)
 	if err!=nil{
@@ -259,6 +260,7 @@ func UpdateAPI(statement types.UpdateStament) Error.Error  {
 	return  Error.CreateRowsError(rowNum)
 }
 
+//DeleteAPI nothing to explain
 func DeleteAPI(statement types.DeleteStatement) Error.Error {
 	err,exprLSRV:=CatalogManager.DeleteCheck(statement)
 	if err!=nil	{
@@ -277,6 +279,7 @@ func DeleteAPI(statement types.DeleteStatement) Error.Error {
 	return   Error.CreateRowsError(rowNum)
 }
 
+//SelectAPI nothing to explain
 func SelectAPI(statement types.SelectStatement) Error.Error  {
 	err,exprLSRV:=CatalogManager.SelectCheck(statement)
 	if err!=nil {
@@ -328,7 +331,7 @@ func ExecFileAPI(statement types.ExecFileStatement) Error.Error  {
 	go func() {
 		defer wg.Done()
 		for _=range FinishChannel {
-
+ 		//TODO 更加优雅的处理方式
 		}
 	}()
 	err=parser.Parse(reader,StatementChannel) //开始解析

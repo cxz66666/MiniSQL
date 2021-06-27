@@ -52,7 +52,7 @@ func LoadDbMeta() error {
 	}
 	return nil
 }
-
+//FlushDbMeta 用来flush整个db的数据库记录
 func FlushDbMeta() error {
 	f,err:=os.OpenFile(MiniSqlCatalogPos,os.O_WRONLY|os.O_TRUNC,0666)
 	defer f.Close()

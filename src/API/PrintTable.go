@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 )
-
+//PrintTable 接收表名，列名，各个记录，打印table
 func PrintTable(tableName string,columnName value.Row,records []value.Row) error  {
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
