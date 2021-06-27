@@ -10,6 +10,7 @@ import (
 	"minisql/src/Interpreter/parser"
 	"minisql/src/Interpreter/types"
 	"minisql/src/RecordManager"
+	"minisql/src/Utils/Error"
 	"os"
 	"path/filepath"
 	"strings"
@@ -92,7 +93,7 @@ func runShell(r chan<- error)  {
 	InitDB()
 
 	StatementChannel:=make(chan types.DStatements,500)  //用于传输操作指令通道
-	FinishChannel:=make(chan struct{},500) //用于api执行完成反馈通道
+	FinishChannel:=make(chan Error.Error,500) //用于api执行完成反馈通道
 	FlushChannel:=make(chan struct{}) //用于每条指令结束后协程flush
 	go API.HandleOneParse(StatementChannel,FinishChannel)  //begin the runtime for exec
 	go BufferManager.BeginBlockFlush(FlushChannel)

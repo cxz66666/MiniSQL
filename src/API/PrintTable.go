@@ -7,17 +7,17 @@ import (
 	"strconv"
 )
 
-func PrintTable(tableName string,columnName []string,records []value.Row) error  {
+func PrintTable(tableName string,columnName value.Row,records []value.Row) error  {
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	totalHeader:=make([]interface{},0,len(columnName)+1)
+	totalHeader:=make([]interface{},0,len(columnName.Values)+1)
 	totalHeader=append(totalHeader,tableName)
-	for _,item:=range columnName {
-		totalHeader=append(totalHeader,item)
+	for _,item:=range columnName.Values {
+		totalHeader=append(totalHeader,item.String())
 	}
 	t.SetStyle(table.StyleColoredBright)
 	t.AppendHeader(totalHeader)
-	columnNum:=len(columnName)
+	columnNum:=len(columnName.Values)
 
 	Rows:=make([]table.Row,0,len(records)+1)
 
