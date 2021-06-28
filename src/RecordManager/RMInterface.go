@@ -362,7 +362,7 @@ func DeleteRecord(table *CatalogManager.TableCatalog, where *types.Where) (error
 		}
 
 	}
-
+	table.RecordCnt-=cnt
 	return nil, cnt
 }
 
@@ -398,6 +398,7 @@ func DeleteRecordWithIndex(table *CatalogManager.TableCatalog, where *types.Wher
 				if err != nil {
 					return err, cnt
 				}
+				retNode = retNode.GetNext()
 				continue
 			}
 			if err := deleteRecord(table, retNode.Pos); err != nil {
@@ -422,6 +423,8 @@ func DeleteRecordWithIndex(table *CatalogManager.TableCatalog, where *types.Wher
 			cnt++
 		}
 		//where maybe nil!!!!
+		table.RecordCnt-=cnt
+
 		return nil, cnt
 	}
 	//索引条件无法找到起始位置（超出边界）
@@ -501,6 +504,7 @@ func UpdateRecordWithIndex(table *CatalogManager.TableCatalog, columns []string,
 				 if err != nil {
 					 return err, cnt
 				 }
+				 retNode = retNode.GetNext()
 				 continue
 			 }
 			 bool, err := updateRecord(table, columns, values, retNode.Pos)
