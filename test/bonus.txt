@@ -1,0 +1,12 @@
+select * from student2 where (((id!=213 or score>70) and name>'name123') or score!=99.0) and name>'name9998';
+select * from student2 where (((213!=id or 70<score) and 'name123'<name) or 99.0!=score) and name>'name9998';
+insert into student2 values(10866666666,'王振阳',100);
+select name from student2 where id=10866666666;  //中文、单独选
+update student2 set name='陈旭征' where name='王振阳'; //update
+create database wzy; //多database
+use database wzy;
+select * from student2;
+
+use database cxz;
+insert into student2(id,name) values(10877777,'hans');
+select * from student2 where id=10877777;  
