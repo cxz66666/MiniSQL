@@ -4,6 +4,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"log"
+	"minisql/src/Utils/Error"
+	"minisql/src/API"
+	"time"
+	"strings"
+	"minisql/src/BufferManager"
+	"minisql/src/Interpreter/parser"
+	"minisql/src/Interpreter/types"
+
 )
 
 func Cors() gin.HandlerFunc {
@@ -26,7 +34,6 @@ func Cors() gin.HandlerFunc {
                                                                                                                                                                                                           
         }
 
-
         if method == "OPTIONS" {
             c.AbortWithStatus(http.StatusNoContent)
         }
@@ -41,11 +48,33 @@ func Cors() gin.HandlerFunc {
     }
 }
 
-func regist()  {
+
+func handleInstruction(instruction string) (Error.Error, time.Duration ){
+	StatementChannel:=make(chan types.DStatements,500)  //用于传输操作指令通道
+	FinishChannel:=make(chan Error.Error,500) //用于api执行完成反馈通道
+	FlushChannel:=make(chan struct{}) //用于每条指令结束后协程flush
+	go API.HandleOneParse(StatementChannel,FinishChannel)  //begin the runtime for exec
+	go BufferManager.BeginBlockFlush(FlushChannel)
+
+	beginTime:=time.Now()
+	parser.Parse(strings.NewReader(instruction),StatementChannel)
+
+	data := <-FinishChannel //等待指令执行完成
+	durationTime:=time.Since(beginTime)
+	FlushChannel<- struct{}{} 
+	
+	return data, durationTime
+}
+func Regist()  {
 	router := gin.Default()
-	router.Use(Cors())
+	//router.Use(Cors())
 	router.POST("/api/query", func(ctx *gin.Context) {
-		
+		res, time := handleInstruction(ctx.PostForm("query"))
+		ctx.JSON(200, gin.H{
+			"status" : res.Status,
+		"time" : time,
+		"rows" : res.Rows,
+		"data" : res.Data})
 	})
 	//router.POST("api/login") {
 
