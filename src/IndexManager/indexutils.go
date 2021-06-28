@@ -270,7 +270,9 @@ func (node bpNode) shrinkSpace(k uint16) {
 	} else {
 		subnode_length = 2 + node.key_length
 	}
-	copy(node.data[kth_pointer_pos:], node.data[kth_pointer_pos+subnode_length:])
+	if kth_pointer_pos+subnode_length < BufferManager.BlockSize {
+		copy(node.data[kth_pointer_pos:], node.data[kth_pointer_pos+subnode_length:])
+	}
 }
 
 // Split a node into half when it is full
