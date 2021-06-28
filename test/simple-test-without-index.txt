@@ -1,0 +1,31 @@
+create database cxz;
+use database cxz;
+
+
+
+create table table2 (
+  column1 int not null,
+  column2 float not null,
+  column3 char(30)
+);
+
+insert into table2 values (123,234.234,'cxzewrwer');
+insert into table2 values (1234,2345.234,'cxzewrwer');
+insert into table2(column1,column2)  values (10,1.1);
+insert into table2 values (123,435.67,'234546');
+insert into table2(column2,column3,column1)  values (1.1,'1231231',100);
+
+
+
+
+
+
+select column1 from table2 where column3='1231231' ;
+select * from table2;
+select * from table2 where column1=100 or column2 >235;
+
+delete from  table2 where column1=100 or column2 >235;
+select * from table2 where column1=100 or column2 >235;
+
+update table2 set column1=456 where  column1=123;
+

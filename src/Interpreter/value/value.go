@@ -235,8 +235,17 @@ func (i Bytes) String() string {
 }
 
 func (i Bytes)Compare(v Value,op CompareType)(bool,error) {
-
-	cp:=bytes.Compare(i.Val,v.(Bytes).Val)
+	left:=i.Val
+	right:=v.(Bytes).Val
+	ib:=bytes.IndexByte(left,0)  //去掉末尾的0
+	if ib!=-1 {
+		left=left[0:ib]
+	}
+	ib=bytes.IndexByte(right,0)
+	if ib!=-1 {
+		right=right[0:ib]
+	}
+	cp:=bytes.Compare(left,right)
 	switch op {
 	case Great:
 		return cp==1,nil

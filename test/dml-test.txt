@@ -1,0 +1,28 @@
+select * from student2 where id=1080100245;
+select * from student2 where score=98.5;
+select * from student2 where name='name245';0.09139299392700195
+select * from student2 where id<>1080109998;
+select * from student2 where score<>98.5;
+select * from student2 where name<>'name9998';
+select * from student2 where score>80 and score<85;
+select * from student2 where score>95 and id<=1080100100;
+insert into student2 values(1080100245,'name245',100);
+create index stuidx on student2 ( score );
+create index stuidx on student2 ( name );
+select * from student2 where name='name245';0.003551006317138672
+insert into student2 values(1080197996,'name97996',100);
+select * from student2 where name='name97996';
+delete from student2 where name='name97996';
+select * from student2 where name='name97996';
+insert into student2 values(1080197996,'name97996',100);
+drop index stuidx;
+select * from student2 where name='name97996';
+select * from student2 where name='name245';
+delete from student2 where id=1080100245;
+select * from student2 where id=1080100245;
+delete from student2 where score=98.5;
+select * from student2 where score=98.5;
+delete from student2;
+select * from student2;
+drop table student2;
+select * from student2;

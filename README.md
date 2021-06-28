@@ -7,6 +7,18 @@ we use go mod to manage dependency,  the mod name is minisql
 
 
 
+
+
+### How To Use?
+
+- create a folder named data at the root position
+- `go run main.go`
+- enjoy yourself!
+
+
+
+
+
 ### Modules
 
 - Buffer Manager

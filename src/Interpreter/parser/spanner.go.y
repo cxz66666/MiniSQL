@@ -3,7 +3,7 @@ package parser
 
 import (
     "strconv"
-	"minisql/src/Interpreter/Value"
+ Value	"minisql/src/Interpreter/value"
 	"minisql/src/Interpreter/types"
 )
 %}
@@ -131,6 +131,12 @@ execfile_stmt:
               FileName: $2+"."+$4,
         }
         yylex.(*lexerWrapper).channelSend <- s
+   }
+   |  EXECFILE string_value {
+       s := types.ExecFileStatement{
+                 FileName: $2,
+           }
+           yylex.(*lexerWrapper).channelSend <- s
    }
 
 create_database:

@@ -108,7 +108,7 @@ func HandleOneParse( dataChannel <-chan types.DStatements,stopChannel chan<- Err
 		case types.ExecFile:
 			err=ExecFileAPI(statement.(types.ExecFileStatement))
 		}
-
+		//fmt.Println(err)
 		stopChannel<- err
 	}
 	close(stopChannel)

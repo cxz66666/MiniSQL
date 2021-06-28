@@ -83,7 +83,7 @@ func BenchmarkBlockRead(b *testing.B) {
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			tmp:= uint16(r.Intn(8000))
+			tmp:= uint16(r.Intn(10000))
 			block,_:= BlockRead(filename,tmp)
 			fmt.Println(filename,tmp)
 			block.FinishRead()

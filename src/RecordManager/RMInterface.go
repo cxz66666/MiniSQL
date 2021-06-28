@@ -291,6 +291,7 @@ func SelectRecordWithIndex(table *CatalogManager.TableCatalog, columns []string,
 				if err != nil {
 					return err, nil
 				}
+				retNode = retNode.GetNext()
 				continue
 			}
 			ans, err := columnFilter(table, record, columns)

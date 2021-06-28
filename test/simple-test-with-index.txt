@@ -1,0 +1,19 @@
+create database cxz;
+use database cxz;
+create table table1 (
+  column1 int not null,
+  column2 float,
+  column3 char(30) not null,
+  primary key (column1)
+);
+insert into table1 values (123,234.234,'陈旭征');
+insert into table1 values (124,234.2341,'帅奕帆');
+drop index column1_index on table1;
+insert into table1 values (125,234.2341,'cxzewrwer');
+
+
+update table1 set column3='eve' where column3='bob';
+select column1 from table1 where column3='陈旭征';
+select column1 from table1 where column3='eve';
+
+select * from table1 where column3='bba' or column2>50000;

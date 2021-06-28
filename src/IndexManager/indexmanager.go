@@ -1,7 +1,6 @@
 package IndexManager
 
 import (
-	"fmt"
 	"minisql/src/BufferManager"
 	"minisql/src/Interpreter/value"
 	"minisql/src/Utils"
@@ -152,14 +151,14 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 	key_length := info.Attr_length
 
 	cur_node, cur_node_block := getBpNode(filename, 0, key_length)
-	if compare_type == value.Equal || compare_type == value.GreatEqual || compare_type == value.Great  {
+	if compare_type == value.Equal || compare_type == value.GreatEqual || compare_type == value.Great {
 		var i uint16
 		// Find the first leaf that contains the key
 
 		for cur_node.isLeaf() == 0 {
 			n := cur_node.getSize()
 			for i = 0; i < n; i++ {
-				if res, _ := cur_node.getKey(i, info.Attr_type).Compare(key_value,value.Great); res {
+				if res, _ := cur_node.getKey(i, info.Attr_type).Compare(key_value, value.Great); res {
 					break
 				}
 			}
@@ -180,34 +179,32 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		}
 	}
 
-
-
 	var i uint16 = 0
 	begin := false
 	dummy_head := new(ResultNode)
 	cur_result_node := dummy_head
 	//fmt.Println("find the first node")
-	if n:=cur_node.getSize();n!=0 {
+	if n := cur_node.getSize(); n != 0 {
 		switch compare_type {
 		case value.Equal:
-				for j := uint16(0); j < n; j++ {
-					res, _ := cur_node.getKey(j, info.Attr_type).CompareWithoutType(key_value);
-					if  res==0 {
-						begin = true
-						new_result_node := new(ResultNode)
-						*new_result_node = ResultNode{
-							Pos:       cur_node.getFilePointer(j),
-							next_node: nil,
-						}
-						cur_node_block.FinishRead() //IMPORTANT!!
-						return new_result_node,nil  //找到了直接返回,不要忘记放锁
+			for j := uint16(0); j < n; j++ {
+				res, _ := cur_node.getKey(j, info.Attr_type).CompareWithoutType(key_value)
+				if res == 0 {
+					begin = true
+					new_result_node := new(ResultNode)
+					*new_result_node = ResultNode{
+						Pos:       cur_node.getFilePointer(j),
+						next_node: nil,
 					}
-					if res>0 { //大于直接跳出 并且返回
-						break
-					}
+					cur_node_block.FinishRead() //IMPORTANT!!
+					return new_result_node, nil //找到了直接返回,不要忘记放锁
 				}
+				if res > 0 { //大于直接跳出 并且返回
+					break
+				}
+			}
 
-		case value.GreatEqual,value.Great:
+		case value.GreatEqual, value.Great:
 			for j := uint16(0); j < n; j++ {
 				if res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value, compare_type); res {
 					begin = true
@@ -215,7 +212,7 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 					break
 				}
 			}
-		case value.LessEqual,value.Less:
+		case value.LessEqual, value.Less:
 			if res, _ := cur_node.getKey(0, info.Attr_type).Compare(key_value, compare_type); res {
 				begin = true
 				i = 0
@@ -258,7 +255,6 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		cur_node_block.FinishRead() //IMPORTANT!!
 		return nil, nil
 	}
-	fmt.Println("begin find result")
 
 	for {
 		end := false
@@ -305,9 +301,9 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 func Create(info IndexInfo) error {
 	// Create file
 	filename := info.Table_name + "_" + info.Attr_name + index_file_suffix
-	f,err:=Utils.CreateFile(filename)
+	f, err := Utils.CreateFile(filename)
 	defer f.Close()
-	if err!=nil	 {
+	if err != nil {
 		return err
 	}
 
