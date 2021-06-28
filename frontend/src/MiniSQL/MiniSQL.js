@@ -199,7 +199,7 @@ function MiniSQL(props) {
                             <Callback status={queryData[0]} times={queryData[1]} rows={queryData[2]} data={queryData[3]}/>}
 
                     </Content>
-                    <Footer style={{textAlign: 'center'}}>MiniSQL ©2020 Created by Tenderness</Footer>
+                    <Footer style={{textAlign: 'center'}}>MiniSQL ©2021 Created by Wolfram</Footer>
                 </Layout>
         }
     </div>)
