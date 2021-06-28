@@ -188,8 +188,8 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 		switch compare_type {
 		case value.Equal:
 			for j := uint16(0); j < n; j++ {
-				res, _ := cur_node.getKey(j, info.Attr_type).CompareWithoutType(key_value)
-				if res == 0 {
+				res, _ := cur_node.getKey(j, info.Attr_type).Compare(key_value,compare_type)
+				if res  {
 					begin = true
 					new_result_node := new(ResultNode)
 					*new_result_node = ResultNode{
@@ -198,9 +198,6 @@ func GetFirst(info IndexInfo, key_value value.Value, compare_type value.CompareT
 					}
 					cur_node_block.FinishRead() //IMPORTANT!!
 					return new_result_node, nil //找到了直接返回,不要忘记放锁
-				}
-				if res > 0 { //大于直接跳出 并且返回
-					break
 				}
 			}
 

@@ -258,7 +258,9 @@ func (node bpNode) makeSpace(k uint16) {
 	} else {
 		subnode_length = 2 + node.key_length
 	}
-	copy(node.data[kth_pointer_pos+subnode_length:], node.data[kth_pointer_pos:])
+	if kth_pointer_pos+subnode_length < BufferManager.BlockSize {
+		copy(node.data[kth_pointer_pos+subnode_length:], node.data[kth_pointer_pos:])
+	}
 }
 
 // Shrink space at position k

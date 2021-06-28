@@ -264,6 +264,7 @@ func SelectRecord(table *CatalogManager.TableCatalog, columns []string, where *t
 //SelectRecordWithIndex  传入select的表，需要返回的字段的名称，where表达式, index为左 string 右 value 中间是判断符的struct， string保证存在索引
 //如果column为空，就认为是选择所有
 func SelectRecordWithIndex(table *CatalogManager.TableCatalog, columns []string, where *types.Where, index types.ComparisonExprLSRV) (error, []value.Row) {
+	fmt.Println("index")
 	ret := []value.Row{}
 	indexinfo := IndexManager.IndexInfo{
 		Table_name:  CatalogManager.TableFilePrefix() + "_data/" + table.TableName,
@@ -304,6 +305,7 @@ func SelectRecordWithIndex(table *CatalogManager.TableCatalog, columns []string,
 		//where maybe nil!!!!
 		return nil, ret
 	}
+	fmt.Println("not found in index")
 	return  SelectRecord(table,columns,where)
 }
 
